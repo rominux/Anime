@@ -78,7 +78,7 @@ class Anime(db.Model):
         
         updated_at_ts = data.get('updatedAt', 0)
         if updated_at_ts:
-            anime.updated_at = datetime.fromtimestamp(updated_at_ts)
+            anime.updated_at = datetime.utcfromtimestamp(updated_at_ts)
         
         return anime
     
