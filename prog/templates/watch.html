@@ -348,6 +348,7 @@
     {% include 'toast.html' %}
     <div class="top-bar">
         <button class="nav-btn" onclick="goBack()">&#11013;&#65039; Retour</button>
+        <a href="/" class="nav-btn" style="text-decoration: none; padding: 8px 16px; background: var(--bg-tertiary); color: white; border-radius: 5px;">⬅️ Portail</a>
         <span class="anime-title">{{ anime_title }} - Ep {{ episode }}</span>
         <button class="nav-btn" id="prevBtn" onclick="prevEpisode()" {{ 'disabled' if not has_prev else '' }}>&#11013; Prec.</button>
         {% if is_last %}

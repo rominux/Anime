@@ -44,6 +44,8 @@ def get_animes_from_db(status=None):
 
 def sync_anilist_to_db():
     logger.info("[SYNC] Starting AniList sync to database...")
+    
+    anime_sync_success = False
     try:
         for status in ["CURRENT", "PLANNING", "COMPLETED"]:
             data = logic.get_anilist_data(status=status)
@@ -63,23 +65,27 @@ def sync_anilist_to_db():
                             elif os.path.exists(cover_png):
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
                     db.session.commit()
-        
-        try:
-            schedule_data = logic.get_airing_schedule()
-            if schedule_data:
-                ScheduleCache.save_schedule(schedule_data)
-                logger.info("[SYNC] Schedule cached successfully")
-        except Exception as e:
-            logger.warning(f"[SYNC] Failed to cache schedule: {e}")
-        
-        logger.info("[SYNC] AniList sync completed")
-        return True
+                    logic.cache_cover(anime_data)
+        anime_sync_success = True
+        logger.info("[SYNC] Anime sync completed")
     except requests.exceptions.ConnectionError as e:
-        logger.error(f"[SYNC] No internet connection: {e}")
-        return False
+        logger.error(f"[SYNC] No internet connection during anime sync: {e}")
     except Exception as e:
-        logger.error(f"[SYNC] Failed to sync: {e}")
-        return False
+        logger.error(f"[SYNC] Failed to sync animes: {e}")
+    
+    try:
+        logger.info("[SYNC] Fetching airing schedule...")
+        schedule_data = logic.get_airing_schedule()
+        if schedule_data:
+            ScheduleCache.save_schedule(schedule_data)
+            logger.info("[SYNC] Airing schedule cached successfully.")
+    except Exception as e:
+        logger.error(f"[SYNC] Failed to cache schedule: {e}")
+    
+    if anime_sync_success:
+        logger.info("[SYNC] Full sync completed")
+        return True
+    return False
 
 
 @app.route("/")
@@ -559,11 +565,12 @@ def api_schedule():
     try:
         schedule_data = ScheduleCache.get_schedule()
         if not schedule_data:
-            return jsonify({"success": False, "error": "No schedule cached. Connect to internet and refresh."})
+            logger.warning("[SCHEDULE] No cache found, returning empty list")
+            return jsonify({"success": True, "schedule": []})
         return jsonify({"success": True, "schedule": schedule_data})
     except Exception as e:
         logger.error(f"Failed to fetch schedule: {e}")
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success": True, "schedule": []})
 
 
 @app.route("/cleanup")
@@ -615,6 +622,10 @@ def cleanup_cover():
         return send_file(cover_jpg)
     elif os.path.exists(cover_png):
         return send_file(cover_png)
+    
+    anime = Anime.get_by_dossier(folder_name)
+    if anime and anime.cover_image:
+        return redirect(anime.cover_image)
     
     return "", 404
 

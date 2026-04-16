@@ -550,11 +550,6 @@ def cache_cover(anime_data):
         return False
     
     anime_dir = os.path.join(ANIME_DIR, nom_dossier)
-    
-    has_videos = any(f.endswith(".mp4") or f.endswith(".mkv") for f in os.listdir(anime_dir)) if os.path.exists(anime_dir) else False
-    if not has_videos:
-        return False
-    
     os.makedirs(anime_dir, exist_ok=True)
     
     cover_path_jpg = os.path.join(anime_dir, "cover.jpg")

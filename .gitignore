@@ -1,4 +1,15 @@
+# Database
+prog/instance/
+*.db
+*.sqlite3
+
+# Environment & Configs
 .env
+token
+config.json
+src/utils/config/config.json
+
+# Python caches
+__pycache__/
+*.pyc
 .venv
-__pycache__
-.evn

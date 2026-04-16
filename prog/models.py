@@ -110,23 +110,28 @@ class ScheduleCache(db.Model):
     
     @staticmethod
     def get_schedule():
-        cache = ScheduleCache.query.first()
-        if cache and cache.data:
-            try:
+        try:
+            cache = ScheduleCache.query.first()
+            if cache and cache.data:
                 return json.loads(cache.data)
-            except:
-                return []
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"ScheduleCache get failed: {e}")
         return []
     
     @staticmethod
     def save_schedule(schedule_data):
-        cache = ScheduleCache.query.first()
-        if not cache:
-            cache = ScheduleCache()
-            db.session.add(cache)
-        cache.data = json.dumps(schedule_data)
-        cache.updated_at = datetime.utcnow()
-        db.session.commit()
+        try:
+            cache = ScheduleCache.query.first()
+            if not cache:
+                cache = ScheduleCache()
+                db.session.add(cache)
+            cache.data = json.dumps(schedule_data)
+            cache.updated_at = datetime.utcnow()
+            db.session.commit()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"ScheduleCache save failed: {e}")
 
 
 def init_db(app):
