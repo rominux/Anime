@@ -1,0 +1,28 @@
+# Core Web Framework
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# HTTP Requests & Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Cloudflare Bypass (optional but recommended)
+cloudscraper>=1.2.71
+
+# Selenium-based Cloudflare bypass (optional, requires Chrome/Chromium)
+undetected-chromedriver>=3.5.0
+
+# Video Processing
+tqdm>=4.66.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Progress bars & CLI
+colorama>=0.4.6
+
+# Utilities
+urllib3>=2.0.0
+certifi>=2023.0.0
+charset-normalizer>=3.0.0

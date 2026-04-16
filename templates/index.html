@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Anime Manager Pro</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <style>
+            :root {
+                --bg-primary: #1e1e2e;
+                --bg-secondary: #2a2a3e;
+                --bg-tertiary: #3a3a4e;
+                --text-primary: #fff;
+                --text-secondary: #aaa;
+                --accent-blue: #0d6efd;
+                --accent-purple: #6f42c1;
+                --accent-green: #198754;
+                --accent-red: #dc3545;
+                --accent-yellow: #ffc107;
+            }
+
+            body {
+                background-color: var(--bg-primary);
+                color: var(--text-primary);
+                min-height: 100vh;
+            }
+
+            .download-tracker {
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border-bottom: 2px solid var(--accent-blue);
+                padding: 12px 20px;
+                display: none;
+                animation: slideDown 0.3s ease-out;
+            }
+
+            .download-tracker.show {
+                display: block;
+            }
+
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-100%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .download-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 10px;
+            }
+
+            .download-title {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--accent-blue);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .download-title .spinner {
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: var(--accent-blue);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .download-count {
+                font-size: 0.8rem;
+                color: var(--text-secondary);
+                background: var(--bg-tertiary);
+                padding: 2px 8px;
+                border-radius: 10px;
+            }
+
+            .downloads-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                max-height: 150px;
+                overflow-y: auto;
+            }
+
+            .download-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                background: rgba(255,255,255,0.05);
+                padding: 8px 12px;
+                border-radius: 8px;
+                transition: background 0.2s;
+            }
+
+            .download-item:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .download-icon {
+                font-size: 1.2rem;
+            }
+
+            .download-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .download-name {
+                font-size: 0.85rem;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .download-progress-bar {
+                height: 4px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 2px;
+                margin-top: 4px;
+                overflow: hidden;
+            }
+
+            .download-progress-fill {
+                height: 100%;
+                background: var(--accent-blue);
+                border-radius: 2px;
+                transition: width 0.3s ease;
+            }
+
+            .download-progress-text {
+                font-size: 0.75rem;
+                color: var(--text-secondary);
+                margin-top: 2px;
+            }
+
+            .source-badge {
+                font-size: 0.65rem;
+                padding: 2px 6px;
+                border-radius: 4px;
+                text-transform: uppercase;
+                font-weight: 600;
+            }
+
+            .source-badge.english {
+                background: var(--accent-blue);
+            }
+
+            .source-badge.french {
+                background: var(--accent-purple);
+            }
+
+            .mode-watching .anime-card {
+                background: var(--bg-secondary);
+            }
+
+            .mode-planning .anime-card {
+                background: #3e2a3e;
+                border: 1px solid var(--accent-purple);
+            }
+
+            .mode-suggestions .anime-card {
+                background: #2a3e35;
+                border: 1px solid var(--accent-green);
+            }
+
+            .anime-card {
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+                border: none;
+                color: white;
+                position: relative;
+            }
+
+            .anime-card:hover {
+                transform: scale(1.03);
+                z-index: 10;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            .anime-img {
+                height: 250px;
+                object-fit: cover;
+            }
+
+            .nav-pills .nav-link {
+                color: var(--text-secondary);
+                cursor: pointer;
+            }
+
+            .nav-pills .nav-link.active {
+                background-color: var(--accent-blue);
+                color: white;
+            }
+
+            .nav-planning .nav-link.active {
+                background-color: var(--accent-purple);
+            }
+
+            .nav-suggestions .nav-link.active {
+                background-color: var(--accent-green);
+            }
+
+            .ep-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                gap: 10px;
+                max-height: 60vh;
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+            .ep-box {
+                aspect-ratio: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 5px;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid transparent;
+                user-select: none;
+            }
+
+            .ep-box:hover {
+                opacity: 0.8;
+            }
+
+            .ep-box.selected {
+                border-color: white;
+                transform: scale(0.9);
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+
+            .status-released {
+                background-color: #6c757d;
+                color: white;
+            }
+
+            .status-unreleased {
+                background-color: #343a40;
+                color: #495057;
+                pointer-events: none;
+            }
+
+            .status-downloaded {
+                background-color: var(--accent-green);
+                color: white;
+            }
+
+            .status-downloading {
+                background-color: var(--accent-yellow);
+                color: black;
+                animation: pulse 1.5s infinite;
+            }
+
+            .status-watched_kept {
+                background-color: var(--accent-red);
+                color: white;
+            }
+
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.5; }
+                100% { opacity: 1; }
+            }
+
+            .modal-content {
+                background-color: var(--bg-secondary) !important;
+                color: white;
+            }
+
+            .modal-header {
+                border-bottom-color: var(--bg-tertiary) !important;
+            }
+
+            .modal-footer {
+                border-top-color: var(--bg-tertiary) !important;
+            }
+
+            .btn-close-white {
+                filter: invert(1);
+            }
+
+            .refreshing {
+                position: relative;
+            }
+
+            .refreshing::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 20px;
+                height: 20px;
+                margin: -10px 0 0 -10px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+            }
+        </style>
+    </head>
+    <body class="mode-{{ view_mode }}">
+        <div class="download-tracker" id="downloadTracker">
+            <div class="download-header">
+                <div class="download-title">
+                    <div class="spinner"></div>
+                    <span>T&#233;l&#233;chargements actifs</span>
+                </div>
+                <span class="download-count" id="downloadCount">0</span>
+            </div>
+            <div class="downloads-list" id="downloadsList"></div>
+        </div>
+
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="m-0">
+                    {% if view_mode == 'planning' %}&#128197; Planning{% elif view_mode == 'suggestions' %}&#128161; Suggestions{% else %}&#128250; Watching{% endif %}
+                </h2>
+                <ul class="nav nav-pills nav-{{ view_mode }}">
+                    <li class="nav-item"><a class="nav-link {% if view_mode == 'watching' %}active{% endif %}" href="/en">Watching</a></li>
+                    <li class="nav-item"><a class="nav-link {% if view_mode == 'planning' %}active{% endif %}" href="/en/planning">Planning</a></li>
+                    <li class="nav-item"><a class="nav-link {% if view_mode == 'suggestions' %}active{% endif %}" href="/en/suggestions">Suggestions</a></li>
+                </ul>
+                <a href="/refresh" class="btn btn-outline-light btn-sm" id="refreshBtn">&#128260; Refresh</a>
+            </div>
+            <div class="row g-4">
+                {% for anime in animes %}
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="card anime-card h-100" onclick="openAnime('{{ anime.nom_dossier }}', {{ anime.progress }})">
+                        <img src="{{ anime.img }}" class="card-img-top anime-img" alt="Cover" loading="lazy" />
+                        <div class="card-body p-2">
+                            <h6 class="card-title text-truncate">{{ anime.nom_complet.split(' ;;; ')[0] }}</h6>
+                            <small class="text-secondary">{{ anime.progress }} / {{ anime.sortie }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %} {% if not animes %}
+                <div class="text-center text-muted mt-5">
+                    <h4>Aucun anime trouv&#233; dans cette liste.</h4>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="modal fade" id="animeModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title flex-grow-1" id="modalTitle">...</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="d-flex justify-content-between mb-3" id="toolbar">
+                            <div id="actionButtons" class="d-none">
+                                <span id="selectCount" class="me-2 badge bg-primary">0</span>
+                                <button class="btn btn-sm btn-success" onclick="downloadSelected()">&#8595; DL</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSelected()">&#128465; Del</button>
+                                <button class="btn btn-sm btn-light" onclick="watchFirstSelected()">&#9654; Play</button>
+                                <button class="btn btn-sm btn-info" onclick="syncAnilist(this)">&#9737; Sync</button>
+                            </div>
+                            <button id="btnAddToWatching" class="btn btn-sm btn-warning d-none" onclick="addToWatching()">&#10133; Ajouter &#224; Watching</button>
+                            <button id="btnSelectNew" class="btn btn-sm btn-outline-warning ms-auto" onclick="selectAllNew()">&#10024; Select. New</button>
+                        </div>
+                        <div id="epGrid" class="ep-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            const VIEW_MODE = "{{ view_mode }}";
+        </script>
+        <script>
+            let currentAnime = {};
+            let selectedEpisodes = new Set();
+            const modal = new bootstrap.Modal(document.getElementById("animeModal"));
+
+            let downloadEventSource = null;
+            let downloadTrackerEl = document.getElementById('downloadTracker');
+            let downloadsListEl = document.getElementById('downloadsList');
+            let downloadCountEl = document.getElementById('downloadCount');
+
+            function initDownloadTracker() {
+                if (typeof EventSource !== 'undefined') {
+                    if (downloadEventSource) {
+                        downloadEventSource.close();
+                    }
+                    downloadEventSource = new EventSource('/api/downloads/stream');
+
+                    downloadEventSource.onmessage = function(event) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            updateDownloadTracker(data.active_downloads);
+                        } catch (e) {
+                            console.error('Failed to parse download status:', e);
+                        }
+                    };
+
+                    downloadEventSource.onerror = function() {
+                        console.warn('SSE connection lost, reconnecting...');
+                        downloadEventSource.close();
+                        setTimeout(initDownloadTracker, 3000);
+                    };
+                } else {
+                    pollDownloadStatus();
+                }
+            }
+
+            function pollDownloadStatus() {
+                fetch('/api/downloads/status')
+                    .then(r => r.json())
+                    .then(data => {
+                        updateDownloadTracker(data.active_downloads);
+                    })
+                    .catch(console.error);
+
+                setTimeout(pollDownloadStatus, 3000);
+            }
+
+            function updateDownloadTracker(downloads) {
+                if (!downloads || downloads.length === 0) {
+                    downloadTrackerEl.classList.remove('show');
+                    return;
+                }
+
+                downloadTrackerEl.classList.add('show');
+                downloadCountEl.textContent = downloads.length;
+
+                downloadsListEl.innerHTML = downloads.map(dl => {
+                    const progressPercent = Math.min(100, Math.max(0, dl.progress || 0));
+                    const episodeNum = dl.episode;
+                    const sourceClass = dl.source === 'french' ? 'french' : 'english';
+
+                    return `
+                        <div class="download-item">
+                            <div class="download-icon">&#128229;</div>
+                            <div class="download-info">
+                                <div class="download-name">${escapeHtml(dl.anime_name)} - Ep ${episodeNum}</div>
+                                <div class="download-progress-bar">
+                                    <div class="download-progress-fill" style="width: ${progressPercent}%"></div>
+                                </div>
+                                <div class="download-progress-text">${progressPercent.toFixed(1)}%</div>
+                            </div>
+                            <span class="source-badge ${sourceClass}">${dl.source === 'french' ? 'FR' : 'EN'}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function openAnime(nomDossier, progress) {
+                document.getElementById("modalTitle").innerText = "Chargement...";
+                document.getElementById("epGrid").innerHTML = '<div class="text-center w-100 my-4">&#8987; Chargement...</div>';
+                document.getElementById("actionButtons").classList.add('d-none');
+                document.getElementById("btnAddToWatching").classList.add('d-none');
+
+                if (VIEW_MODE === "suggestions") {
+                    document.getElementById("btnSelectNew").classList.add('d-none');
+                } else {
+                    document.getElementById("btnSelectNew").classList.remove('d-none');
+                }
+
+                selectedEpisodes.clear();
+                modal.show();
+
+                console.log('Fetching anime details for:', nomDossier);
+
+                // Small delay to ensure modal is rendered and SSE doesn't interfere
+                setTimeout(() => {
+                    console.log('Actually fetching:', nomDossier);
+                    fetch(`/api/details/${nomDossier}`)
+                        .then(r => {
+                            console.log('Response received:', r.status, r.statusText);
+                            if (!r.ok) {
+                                throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                            }
+                            return r.json();
+                        })
+                        .then(data => {
+                            console.log('Data received:', data.nom_complet, data.episodes.length, 'episodes');
+                            currentAnime = data;
+                            currentAnime.progress = progress;
+                            renderModal(data);
+
+                            if (VIEW_MODE === "planning" || VIEW_MODE === "suggestions") {
+                                document.getElementById("btnAddToWatching").classList.remove('d-none');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to load anime details:', err);
+                            console.error('Error type:', err.name);
+                            document.getElementById("epGrid").innerHTML = `<div class="text-danger text-center">Erreur: ${err.message || 'Connection failed'}</div>`;
+                        });
+                }, 100);
+            }
+
+            function renderModal(data) {
+                document.getElementById("modalTitle").innerText = data.nom_complet.split(" ;;; ")[0];
+                const grid = document.getElementById("epGrid");
+                grid.innerHTML = "";
+
+                if (VIEW_MODE === "suggestions" && data.episodes.length === 0) {
+                    grid.innerHTML = '<div class="text-center text-muted">Ajoutez cet anime &#224; votre liste pour voir les &#233;pisodes.</div>';
+                    return;
+                }
+
+                data.episodes.forEach(ep => {
+                    const div = document.createElement("div");
+                    div.className = `ep-box status-${ep.status}`;
+                    div.innerText = ep.ep;
+                    div.dataset.ep = ep.ep;
+                    div.dataset.status = ep.status;
+
+                    if (VIEW_MODE !== "suggestions") {
+                        // Downloaded, watched, or downloading - click to select, then watch
+                        if (ep.status === "downloaded" || ep.status === "watched_kept" || ep.status === "downloading") {
+                            div.onclick = () => toggleSelect(div, ep.ep);
+                        }
+                        // Released episodes - click to select for download
+                        else if (ep.status === "released") {
+                            div.onclick = () => toggleSelect(div, ep.ep);
+                        }
+                        // Unreleased episodes - not clickable
+                        else {
+                            div.style.cursor = "default";
+                            div.style.opacity = "0.5";
+                        }
+                    } else {
+                        div.style.cursor = "default";
+                        div.style.opacity = "0.5";
+                    }
+
+                    grid.appendChild(div);
+                });
+            }
+
+            function toggleSelect(div, epNum) {
+                if (selectedEpisodes.has(epNum)) {
+                    selectedEpisodes.delete(epNum);
+                    div.classList.remove("selected");
+                } else {
+                    selectedEpisodes.add(epNum);
+                    div.classList.add("selected");
+                }
+                updateButtons();
+            }
+
+            function updateButtons() {
+                const btns = document.getElementById("actionButtons");
+                document.getElementById("selectCount").innerText = selectedEpisodes.size;
+
+                if (VIEW_MODE === "suggestions") return;
+
+                if (selectedEpisodes.size > 0) {
+                    btns.classList.remove('d-none');
+                } else {
+                    btns.classList.add('d-none');
+                }
+            }
+
+            function isDownloadedEpisode(epNum) {
+                const epData = currentAnime.episodes?.find(e => e.ep === epNum);
+                return epData && (epData.status === "downloaded" || epData.status === "watched_kept");
+            }
+
+            function selectAllNew() {
+                if (!currentAnime.episodes) return;
+
+                document.querySelectorAll(".ep-box").forEach(div => {
+                    const epNum = parseInt(div.dataset.ep);
+                    if (div.dataset.status === "released" && epNum > (currentAnime.progress || 0)) {
+                        if (!selectedEpisodes.has(epNum)) {
+                            selectedEpisodes.add(epNum);
+                            div.classList.add("selected");
+                        }
+                    }
+                });
+
+                updateButtons();
+            }
+
+            function downloadSelected() {
+                fetch("/api/bulk_download", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        nom_dossier: currentAnime.nom_dossier,
+                        episodes: Array.from(selectedEpisodes),
+                    }),
+                }).then(() => {
+                    modal.hide();
+                    refreshDownloadTracker();
+                });
+            }
+
+            function refreshDownloadTracker() {
+                fetch('/api/downloads/status')
+                    .then(r => r.json())
+                    .then(data => {
+                        updateDownloadTracker(data.active_downloads);
+                    })
+                    .catch(console.error);
+            }
+
+            function deleteSelected() {
+                fetch("/api/bulk_delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        nom_dossier: currentAnime.nom_dossier,
+                        episodes: Array.from(selectedEpisodes),
+                    }),
+                })
+                    .then(r => r.json())
+                    .then(() => {
+                        modal.hide();
+                        location.reload();
+                    });
+            }
+
+            function watchFirstSelected() {
+                if (selectedEpisodes.size === 0) return;
+                const first = Array.from(selectedEpisodes).sort((a, b) => a - b)[0];
+                window.location.href = `/watch/${currentAnime.nom_dossier}/${first}`;
+            }
+
+            function syncAnilist(btnElement) {
+                if (selectedEpisodes.size === 0) return;
+                const maxEp = Math.max(...Array.from(selectedEpisodes));
+
+                fetch("/api/sync_anilist", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        media_id: currentAnime.id,
+                        last_episode: maxEp,
+                        total_episodes: currentAnime.total,
+                    }),
+                }).then(() => {
+                    const oldText = btnElement.innerText;
+                    btnElement.innerText = "&#10003; Lanc&#233;";
+                    setTimeout(() => {
+                        btnElement.innerText = oldText;
+                    }, 2000);
+                });
+            }
+
+            function addToWatching() {
+                fetch("/api/change_status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        media_id: currentAnime.id,
+                        status: "CURRENT",
+                    }),
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            modal.hide();
+                            window.location.href = "/";
+                        }
+                    });
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initDownloadTracker();
+
+                const refreshBtn = document.getElementById('refreshBtn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', function() {
+                        this.classList.add('refreshing');
+                        setTimeout(() => {
+                            this.classList.remove('refreshing');
+                        }, 1000);
+                    });
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (downloadEventSource) {
+                    downloadEventSource.close();
+                }
+            });
+        </script>
+    </body>
+</html>
