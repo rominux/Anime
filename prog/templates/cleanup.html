@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Nettoyage Stockage</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { background-color: #1e1e2e; color: #fff; padding: 20px; }
+        .folder-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; }
+        .empty-folder { border-color: #dc3545; }
+        .orphaned-folder { border-color: #ffc107; }
+        .checkbox-wrapper input { width: 20px; height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn btn-outline-light mb-4">← Retour</a>
+        <h2 class="mb-4">🧹 Nettoyage Stockage</h2>
+        
+        <div class="mb-4">
+            <button class="btn btn-primary" onclick="scanFolders()">🔍 Scanner le dossier Anime</button>
+        </div>
+
+        <div id="scan-results">
+            <div class="text-secondary">Cliquez sur "Scanner" pour analyser les dossiers.</div>
+        </div>
+
+        <div class="mt-4" id="delete-section" style="display:none;">
+            <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Supprimer la sélection</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allFolders = [];
+
+        function scanFolders() {
+            const results = document.getElementById('scan-results');
+            results.innerHTML = '<div class="text-warning">Analyse en cours...</div>';
+            
+            fetch('/api/cleanup/scan')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        allFolders = [...data.data.empty, ...data.data.orphaned];
+                        renderFolders(data.data);
+                    } else {
+                        results.innerHTML = '<div class="text-danger">Erreur: ' + (data.error || 'Inconnu') + '</div>';
+                    }
+                })
+                .catch(e => {
+                    results.innerHTML = '<div class="text-danger">Erreur de connexion</div>';
+                });
+        }
+
+        function renderFolders(data) {
+            const results = document.getElementById('scan-results');
+            
+            if ((!data.empty || data.empty.length === 0) && (!data.orphaned || data.orphaned.length === 0)) {
+                results.innerHTML = '<div class="text-success">Aucun dossier à nettoyer!</div>';
+                return;
+            }
+
+            let html = '';
+
+            if (data.empty && data.empty.length > 0) {
+                html += '<h5 class="text-danger mt-4">Dossiers vides</h5>';
+                data.empty.forEach(f => {
+                    html += `
+                        <div class="card folder-card empty-folder p-3 d-flex align-items-center">
+                            <div class="checkbox-wrapper me-3">
+                                <input type="checkbox" data-folder="${f.name}" />
+                            </div>
+                            <div>
+                                <strong>${f.name}</strong>
+                                <div class="text-danger small">Aucun fichier vidéo</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (data.orphaned && data.orphaned.length > 0) {
+                html += '<h5 class="text-warning mt-4">Dossiers orphelins (non dans vos listes)</h5>';
+                data.orphaned.forEach(f => {
+                    html += `
+                        <div class="card folder-card orphaned-folder p-3 d-flex align-items-center">
+                            <div class="checkbox-wrapper me-3">
+                                <input type="checkbox" data-folder="${f.name}" />
+                            </div>
+                            <div>
+                                <strong>${f.name}</strong>
+                                <div class="text-warning small">Dossier avec épisodes mais non suivi</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            results.innerHTML = html;
+            document.getElementById('delete-section').style.display = 'block';
+        }
+
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('#scan-results input[type="checkbox"]:checked');
+            const folders = Array.from(checkboxes).map(cb => cb.dataset.folder);
+            
+            if (folders.length === 0) {
+                alert('Sélectionnez au moins un dossier à supprimer');
+                return;
+            }
+
+            if (!confirm(`Supprimer ${folders.length} dossier(s)? Cette action est irréversible.`)) {
+                return;
+            }
+
+            fetch('/api/cleanup/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({folders: folders})
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert(`Supprimé(s): ${data.deleted.join(', ')}`);
+                scanFolders();
+            })
+            .catch(e => {
+                alert('Erreur lors de la suppression');
+            });
+        }
+    </script>
+</body>
+</html>

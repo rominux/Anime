@@ -541,3 +541,149 @@ def search_anilist(query):
     except requests.exceptions.RequestException as e:
         logger.error(f"AniList search failed: {e}")
         return []
+
+
+def cache_cover(anime_data):
+    nom_dossier = anime_data.get("nom_dossier")
+    if not nom_dossier:
+        return False
+    
+    anime_dir = os.path.join(ANIME_DIR, nom_dossier)
+    os.makedirs(anime_dir, exist_ok=True)
+    
+    cover_path_jpg = os.path.join(anime_dir, "cover.jpg")
+    cover_path_png = os.path.join(anime_dir, "cover.png")
+    
+    if os.path.exists(cover_path_jpg) or os.path.exists(cover_path_png):
+        return True
+    
+    img_url = anime_data.get("img")
+    if not img_url:
+        return False
+    
+    try:
+        resp = requests.get(img_url, timeout=15, stream=True)
+        resp.raise_for_status()
+        
+        content_type = resp.headers.get("Content-Type", "")
+        if "png" in content_type.lower():
+            target_path = cover_path_png
+        else:
+            target_path = cover_path_jpg
+        
+        with open(target_path, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        
+        logger.info(f"[CACHE] Downloaded cover for {nom_dossier}")
+        return True
+    except Exception as e:
+        logger.error(f"[CACHE] Failed to download cover for {nom_dossier}: {e}")
+        return False
+
+
+def cache_all_covers(anime_list):
+    for anime in anime_list:
+        threading.Thread(target=cache_cover, args=(anime,), daemon=True).start()
+
+
+def get_local_cover_path(nom_dossier):
+    anime_dir = os.path.join(ANIME_DIR, nom_dossier)
+    cover_jpg = os.path.join(anime_dir, "cover.jpg")
+    cover_png = os.path.join(anime_dir, "cover.png")
+    
+    if os.path.exists(cover_jpg):
+        return cover_jpg
+    if os.path.exists(cover_png):
+        return cover_png
+    return None
+
+
+def get_airing_schedule(username="Pate0Sucre"):
+    query = """
+    query ($userName: String, $weeks: Int) {
+      MediaListCollection(userName: $userName, type: ANIME, status_in: [CURRENT, PLANNING]) {
+        lists { entries { media { id title { romaji english } nextAiringEpisode { episode airingAt } coverImage { large } } } }
+      }
+    }
+    """
+    try:
+        resp = requests.post(
+            "https://graphql.anilist.co",
+            json={"query": query, "variables": {"userName": username, "weeks": 2}},
+            timeout=15
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch airing schedule: {e}")
+        return []
+    
+    schedule = []
+    try:
+        lists = data.get("data", {}).get("MediaListCollection", {}).get("lists", [])
+        for liste in lists:
+            for entry in liste["entries"]:
+                media = entry["media"]
+                next_ep = media.get("nextAiringEpisode")
+                if next_ep:
+                    schedule.append({
+                        "id": media["id"],
+                        "title": media["title"].get("romaji") or media["title"].get("english", "Unknown"),
+                        "episode": next_ep["episode"],
+                        "airing_at": next_ep["airingAt"],
+                        "cover": media["coverImage"]["large"]
+                    })
+        
+        schedule.sort(key=lambda x: x["airing_at"])
+        return schedule
+    except (KeyError, TypeError) as e:
+        logger.error(f"Failed to parse schedule: {e}")
+        return []
+
+
+def scan_cleanup():
+    watched_ids = set()
+    try:
+        for status in ["CURRENT", "PLANNING", "COMPLETED"]:
+            data = get_anilist_data(status=status)
+            watched_ids.update(anime["id"] for anime in data)
+    except Exception:
+        pass
+    
+    empty_folders = []
+    orphaned_folders = []
+    
+    if not os.path.exists(ANIME_DIR):
+        return {"empty": [], "orphaned": []}
+    
+    for folder in os.listdir(ANIME_DIR):
+        folder_path = os.path.join(ANIME_DIR, folder)
+        if not os.path.isdir(folder_path):
+            continue
+        
+        has_videos = any(f.endswith(".mp4") or f.endswith(".mkv") for f in os.listdir(folder_path))
+        
+        if not has_videos:
+            empty_folders.append({"name": folder, "type": "empty"})
+        else:
+            base_name = folder.replace("_FR", "")
+            is_orphaned = True
+            
+            try:
+                anime_id = int(folder.split("_")[-1]) if folder.split("_")[-1].isdigit() else None
+                if anime_id and anime_id in watched_ids:
+                    is_orphaned = False
+            except:
+                pass
+            
+            for anime in watched_ids:
+                if base_name.lower() in str(anime).lower() or str(anime) in folder:
+                    is_orphaned = False
+                    break
+            
+            if is_orphaned:
+                orphaned_folders.append({"name": folder, "type": "orphaned"})
+    
+    return {"empty": empty_folders, "orphaned": orphaned_folders}

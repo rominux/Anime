@@ -1,6 +1,10 @@
 #!/bin/bash
-source /home/omain/Projets/AnimeProgTest/.venv/bin/activate
-/home/omain/Projets/AnimeProgTest
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR/prog"
+
+source "$SCRIPT_DIR/.venv/bin/activate"
+
+cd "$PROJECT_DIR"
 clear
 firefox http://127.0.0.1:5000 & 2>/dev/null
-python3 /home/omain/Projets/AnimeProgTest/app.py
+python app.py

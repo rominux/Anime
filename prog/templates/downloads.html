@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Téléchargements & Calendrier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { background-color: #1e1e2e; color: #fff; padding: 20px; }
+        .nav-tabs .nav-link { color: #aaa; }
+        .nav-tabs .nav-link.active { background-color: #2a2a3e; color: #fff; border-color: #3d3d5c; }
+        .episode-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; }
+        .active-download { background: #1a3a1a; border-color: #28a745; }
+        .available-download { background: #2a2a3e; }
+        .anime-cover { width: 60px; height: 85px; object-fit: cover; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn btn-outline-light mb-4">← Retour</a>
+        <h2 class="mb-4">📥 Téléchargements & Calendrier</h2>
+        
+        <ul class="nav nav-tabs mb-4" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#active">Actifs</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#available">Disponibles</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#schedule">Calendrier</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="active">
+                <h4 class="text-success mb-3">Téléchargements en cours</h4>
+                <div id="active-downloads">
+                    <div class="text-center text-secondary">Chargement...</div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="available">
+                <h4 class="text-info mb-3">Épisodes disponibles au téléchargement</h4>
+                <div id="available-downloads">
+                    <div class="text-center text-secondary">Chargement...</div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="schedule">
+                <h4 class="text-warning mb-3">Prochaines sorties</h4>
+                <div id="schedule-list">
+                    <div class="text-center text-secondary">Chargement...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function loadDashboard() {
+            fetch('/api/downloads/dashboard')
+                .then(r => r.json())
+                .then(data => {
+                    const activeDiv = document.getElementById('active-downloads');
+                    if (data.active && data.active.length > 0) {
+                        activeDiv.innerHTML = data.active.map(d => `
+                            <div class="card episode-card active-download p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                                    </div>
+                                    <div>
+                                        <strong>${d.name || d.key}</strong>
+                                        <div class="text-success">${d.progress || 0}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        activeDiv.innerHTML = '<div class="text-secondary">Aucun téléchargement actif</div>';
+                    }
+
+                    const availDiv = document.getElementById('available-downloads');
+                    if (data.available && data.available.length > 0) {
+                        availDiv.innerHTML = data.available.map(a => `
+                            <div class="card episode-card available-download p-3 d-flex align-items-center">
+                                <img src="${a.img || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                                <div class="flex-grow-1">
+                                    <strong>${a.nom_complet}</strong>
+                                    <div class="text-info">Épisode ${a.ep}</div>
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="downloadEp('${a.nom_dossier}', ${a.ep})">Télécharger</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        availDiv.innerHTML = '<div class="text-secondary">Aucun épisode disponible</div>';
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+
+        function downloadEp(nomDossier, ep) {
+            fetch('/api/bulk_download', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({nom_dossier: nomDossier, episodes: [ep]})
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'started') {
+                    setTimeout(loadDashboard, 1000);
+                }
+            });
+        }
+
+        fetch('/api/schedule')
+            .then(r => r.json())
+            .then(data => {
+                const scheduleDiv = document.getElementById('schedule-list');
+                if (data.success && data.schedule && data.schedule.length > 0) {
+                    scheduleDiv.innerHTML = data.schedule.map(s => {
+                        const date = new Date(s.airing_at * 1000);
+                        return `
+                            <div class="card episode-card p-3 d-flex align-items-center">
+                                <img src="${s.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                                <div class="flex-grow-1">
+                                    <strong>${s.title}</strong>
+                                    <div class="text-info">Épisode ${s.episode}</div>
+                                </div>
+                                <div class="text-warning">${date.toLocaleDateString('fr-FR')} ${date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    scheduleDiv.innerHTML = '<div class="text-secondary">Aucune upcoming release</div>';
+                }
+            })
+            .catch(e => {
+                document.getElementById('schedule-list').innerHTML = '<div class="text-danger">Erreur de chargement</div>';
+            });
+
+        loadDashboard();
+        setInterval(loadDashboard, 5000);
+    </script>
+</body>
+</html>

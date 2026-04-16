@@ -25,7 +25,7 @@ logger = setup_logging()
 app_logger = logging.getLogger("werkzeug")
 app_logger.setLevel(logging.ERROR)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates", static_folder="static")
 
 download_manager = get_download_manager()
 
@@ -60,7 +60,12 @@ def index_en():
     logger.info("[ROUTE] /en - Loading watching list")
     if not CACHE_WATCHING:
         logger.info("[ROUTE] Cache empty, fetching from AniList...")
-        CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+            logic.cache_all_covers(CACHE_WATCHING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch from AniList: {e}")
+            CACHE_WATCHING = []
         logger.info(f"[ROUTE] Fetched {len(CACHE_WATCHING)} anime from AniList")
     return render_template("index.html", animes=CACHE_WATCHING, view_mode="watching")
 
@@ -70,7 +75,12 @@ def planning_en():
     global CACHE_PLANNING
     logger.info("[ROUTE] /en/planning - Loading planning list")
     if not CACHE_PLANNING:
-        CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+            logic.cache_all_covers(CACHE_PLANNING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch planning: {e}")
+            CACHE_PLANNING = []
     return render_template("index.html", animes=CACHE_PLANNING, view_mode="planning")
 
 
@@ -79,7 +89,12 @@ def suggestions_en():
     global CACHE_SUGGESTIONS
     logger.info("[ROUTE] /en/suggestions - Loading suggestions")
     if not CACHE_SUGGESTIONS:
-        CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+        try:
+            CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+            logic.cache_all_covers(CACHE_SUGGESTIONS)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch suggestions: {e}")
+            CACHE_SUGGESTIONS = []
     return render_template("index.html", animes=CACHE_SUGGESTIONS, view_mode="suggestions")
 
 
@@ -87,7 +102,12 @@ def suggestions_en():
 def index_fr():
     global CACHE_WATCHING
     if not CACHE_WATCHING:
-        CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+            logic.cache_all_covers(CACHE_WATCHING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch from AniList: {e}")
+            CACHE_WATCHING = []
     return render_template("fr_index.html", animes=CACHE_WATCHING, view_mode="watching")
 
 
@@ -95,7 +115,12 @@ def index_fr():
 def planning_fr():
     global CACHE_PLANNING
     if not CACHE_PLANNING:
-        CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+            logic.cache_all_covers(CACHE_PLANNING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch planning: {e}")
+            CACHE_PLANNING = []
     return render_template("fr_index.html", animes=CACHE_PLANNING, view_mode="planning")
 
 
@@ -103,7 +128,12 @@ def planning_fr():
 def suggestions_fr():
     global CACHE_SUGGESTIONS
     if not CACHE_SUGGESTIONS:
-        CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+        try:
+            CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+            logic.cache_all_covers(CACHE_SUGGESTIONS)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch suggestions: {e}")
+            CACHE_SUGGESTIONS = []
     return render_template("fr_index.html", animes=CACHE_SUGGESTIONS, view_mode="suggestions")
 
 
@@ -111,7 +141,12 @@ def suggestions_fr():
 def anilist_index():
     global CACHE_WATCHING
     if not CACHE_WATCHING:
-        CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+            logic.cache_all_covers(CACHE_WATCHING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch from AniList: {e}")
+            CACHE_WATCHING = []
     return render_template("anilist_index.html", animes=CACHE_WATCHING, view_mode="watching")
 
 
@@ -119,7 +154,12 @@ def anilist_index():
 def anilist_planning():
     global CACHE_PLANNING
     if not CACHE_PLANNING:
-        CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+            logic.cache_all_covers(CACHE_PLANNING)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch planning: {e}")
+            CACHE_PLANNING = []
     return render_template("anilist_index.html", animes=CACHE_PLANNING, view_mode="planning")
 
 
@@ -127,7 +167,12 @@ def anilist_planning():
 def anilist_completed():
     global CACHE_COMPLETED
     if not CACHE_COMPLETED:
-        CACHE_COMPLETED = logic.get_anilist_data(status="COMPLETED")
+        try:
+            CACHE_COMPLETED = logic.get_anilist_data(status="COMPLETED")
+            logic.cache_all_covers(CACHE_COMPLETED)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch completed: {e}")
+            CACHE_COMPLETED = []
     return render_template("anilist_index.html", animes=CACHE_COMPLETED, view_mode="completed")
 
 
@@ -135,7 +180,12 @@ def anilist_completed():
 def anilist_season():
     global CACHE_SUGGESTIONS
     if not CACHE_SUGGESTIONS:
-        CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+        try:
+            CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+            logic.cache_all_covers(CACHE_SUGGESTIONS)
+        except Exception as e:
+            logger.error(f"[ROUTE] Failed to fetch seasonal: {e}")
+            CACHE_SUGGESTIONS = []
     return render_template("anilist_index.html", animes=CACHE_SUGGESTIONS, view_mode="season")
 
 
@@ -156,13 +206,29 @@ def refresh():
     referrer = request.referrer or "/"
 
     if "planning" in referrer:
-        CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+            logic.cache_all_covers(CACHE_PLANNING)
+        except Exception:
+            pass
     elif "suggestions" in referrer or "season" in referrer:
-        CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+        try:
+            CACHE_SUGGESTIONS = logic.get_seasonal_suggestions()
+            logic.cache_all_covers(CACHE_SUGGESTIONS)
+        except Exception:
+            pass
     elif "completed" in referrer:
-        CACHE_COMPLETED = logic.get_anilist_data(status="COMPLETED")
+        try:
+            CACHE_COMPLETED = logic.get_anilist_data(status="COMPLETED")
+            logic.cache_all_covers(CACHE_COMPLETED)
+        except Exception:
+            pass
     else:
-        CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+            logic.cache_all_covers(CACHE_WATCHING)
+        except Exception:
+            pass
 
     return redirect(referrer)
 
@@ -542,6 +608,95 @@ def fr_bulk_download():
     )
     logic_fr.add_to_queue_fr(data.get("nom_dossier"), data.get("episodes_urls"))
     return jsonify({"status": "started"})
+
+
+@app.route("/downloads")
+def downloads_page():
+    return render_template("downloads.html")
+
+
+@app.route("/api/downloads/dashboard")
+def downloads_dashboard():
+    active_downloads = download_manager.get_active_downloads()
+    
+    all_animes = CACHE_WATCHING + CACHE_PLANNING
+    available_episodes = []
+    
+    anime_dir = get_anime_dir()
+    for anime in all_animes:
+        nom_dossier = anime["nom_dossier"]
+        path = os.path.join(anime_dir, nom_dossier)
+        
+        if not os.path.exists(path):
+            for ep in range(1, anime["sortie"] + 1):
+                available_episodes.append({
+                    "nom_dossier": nom_dossier,
+                    "nom_complet": anime["nom_complet"],
+                    "ep": ep,
+                    "img": anime["img"]
+                })
+        else:
+            existing = {int(f.replace(".mp4", "")) for f in os.listdir(path) if f.endswith(".mp4")}
+            for ep in range(1, anime["sortie"] + 1):
+                if ep not in existing:
+                    available_episodes.append({
+                        "nom_dossier": nom_dossier,
+                        "nom_complet": anime["nom_complet"],
+                        "ep": ep,
+                        "img": anime["img"]
+                    })
+    
+    return jsonify({
+        "active": active_downloads,
+        "available": available_episodes
+    })
+
+
+@app.route("/schedule")
+def schedule_page():
+    return render_template("schedule.html")
+
+
+@app.route("/api/schedule")
+def api_schedule():
+    try:
+        schedule_data = logic.get_airing_schedule()
+        return jsonify({"success": True, "schedule": schedule_data})
+    except Exception as e:
+        logger.error(f"Failed to fetch schedule: {e}")
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/cleanup")
+def cleanup_page():
+    return render_template("cleanup.html")
+
+
+@app.route("/api/cleanup/scan")
+def cleanup_scan():
+    try:
+        result = logic.scan_cleanup()
+        return jsonify({"success": True, "data": result})
+    except Exception as e:
+        logger.error(f"Cleanup scan failed: {e}")
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/cleanup/delete", methods=["POST"])
+def cleanup_delete():
+    folders = request.json.get("folders", [])
+    deleted = []
+    for folder in folders:
+        try:
+            anime_dir = get_anime_dir()
+            path = os.path.join(anime_dir, folder)
+            if os.path.exists(path):
+                import shutil
+                shutil.rmtree(path)
+                deleted.append(folder)
+        except Exception as e:
+            logger.error(f"Failed to delete {folder}: {e}")
+    return jsonify({"success": True, "deleted": deleted})
 
 
 @app.errorhandler(404)
