@@ -61,7 +61,6 @@ def sync_anilist_to_db():
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
                             elif os.path.exists(cover_png):
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
-                    anime.touch()
         
         logger.info("[SYNC] AniList sync completed")
         return True

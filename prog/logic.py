@@ -66,7 +66,7 @@ def get_anilist_data(username="Pate0Sucre", status="CURRENT"):
     query = """
     query ($userName: String, $status: MediaListStatus) {
       MediaListCollection(userName: $userName, type: ANIME, status: $status, sort: [UPDATED_TIME_DESC]) {
-        lists { entries { progress media { id title { romaji english } episodes nextAiringEpisode { episode } siteUrl coverImage { large } } } }
+        lists { entries { updatedAt progress media { id title { romaji english } episodes nextAiringEpisode { episode } siteUrl coverImage { large } } } }
       }
     }
     """
@@ -109,7 +109,8 @@ def get_anilist_data(username="Pate0Sucre", status="CURRENT"):
                     "sortie": episodes_sortis,
                     "total": total_estime,
                     "lien": media.get("siteUrl"),
-                    "img": media["coverImage"]["large"]
+                    "img": media["coverImage"]["large"],
+                    "updatedAt": e.get("updatedAt", 0)
                 })
         return resultats
     except (KeyError, TypeError) as e:

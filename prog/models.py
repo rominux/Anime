@@ -75,7 +75,10 @@ class Anime(db.Model):
         anime.progress = data.get('progress', 0)
         anime.cover_image = data.get('img')
         anime.lien = data.get('lien')
-        anime.updated_at = datetime.utcnow()
+        
+        updated_at_ts = data.get('updatedAt', 0)
+        if updated_at_ts:
+            anime.updated_at = datetime.fromtimestamp(updated_at_ts)
         
         return anime
     
