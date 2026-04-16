@@ -6,14 +6,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
-        .schedule-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 15px; }
-        .anime-cover { width: 50px; height: 70px; object-fit: cover; border-radius: 4px; }
-        .day-header { background: #3d3d5c; padding: 10px; border-radius: 5px; margin: 20px 0 10px; }
+        .schedule-table { background: #2a2a3e; border-collapse: separate; border-spacing: 0 10px; }
+        .schedule-table th { background: #3d3d5c; padding: 12px; text-align: left; }
+        .schedule-table td { background: #2a2a3e; padding: 12px; vertical-align: middle; }
+        .schedule-table tr td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        .schedule-table tr td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        .anime-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; }
+        .day-header { background: #3d3d5c; padding: 15px; border-radius: 8px; margin: 25px 0 15px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/" class="btn btn-outline-light mb-4">← Retour</a>
+        <a href="/" class="btn btn-outline-light mb-4">← Menu Principal</a>
         <h2 class="mb-4">📅 Calendrier des Sorties</h2>
         
         <div id="schedule-container">
@@ -34,40 +38,59 @@
                         return;
                     }
 
-                    const byDate = {};
+                    const dayNames = {
+                        'Monday': 'Lundi',
+                        'Tuesday': 'Mardi',
+                        'Wednesday': 'Mercredi',
+                        'Thursday': 'Jeudi',
+                        'Friday': 'Vendredi',
+                        'Saturday': 'Samedi',
+                        'Sunday': 'Dimanche'
+                    };
+
+                    const byDay = {};
                     data.schedule.forEach(item => {
                         const date = new Date(item.airing_at * 1000);
-                        const key = date.toDateString();
-                        if (!byDate[key]) byDate[key] = [];
-                        byDate[key].push({...item, date});
+                        const dayKey = date.toISOString().split('T')[0];
+                        if (!byDay[dayKey]) byDay[dayKey] = [];
+                        byDay[dayKey].push({...item, date});
                     });
 
                     let html = '';
-                    Object.keys(byDate).sort((a, b) => new Date(a) - new Date(b)).forEach(dateKey => {
-                        const items = byDate[dateKey];
-                        const dateObj = items[0].date;
-                        const dayName = dateObj.toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'});
+                    const sortedDays = Object.keys(byDay).sort((a, b) => new Date(a) - new Date(b));
+
+                    sortedDays.forEach(dayKey => {
+                        const items = byDay[dayKey];
+                        const firstDate = items[0].date;
+                        const dayName = dayNames[firstDate.toLocaleDateString('en-US', {weekday: 'long'})] || firstDate.toLocaleDateString('fr-FR', {weekday: 'long'});
+                        const dayNum = firstDate.getDate();
+                        const monthName = firstDate.toLocaleDateString('fr-FR', {month: 'long'});
                         
-                        html += `<div class="day-header"><h5 class="mb-0">${dayName}</h5></div>`;
+                        html += `<div class="day-header"><h5 class="mb-0">${dayName} ${dayNum} ${monthName}</h5></div>`;
+                        
+                        html += '<table class="table schedule-table">';
+                        html += '<thead><tr><th style="width:100px">Image</th><th>Titre</th><th style="width:100px">Épisode</th><th style="width:120px">Heure</th></tr></thead>';
+                        html += '<tbody>';
                         
                         items.forEach(item => {
                             const time = item.date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
                             html += `
-                                <div class="card schedule-card p-3 d-flex align-items-center">
-                                    <img src="${item.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
-                                    <div class="flex-grow-1">
-                                        <strong>${item.title}</strong>
-                                        <div class="text-info">Épisode ${item.episode}</div>
-                                    </div>
-                                    <div class="text-warning">${time}</div>
-                                </div>
+                                <tr>
+                                    <td><img src="${item.cover || ''}" class="anime-cover" onerror="this.style.display='none'" /></td>
+                                    <td class="text-light fw-bold">${item.title}</td>
+                                    <td class="text-info">#${item.episode}</td>
+                                    <td class="text-warning">${time}</td>
+                                </tr>
                             `;
                         });
+                        
+                        html += '</tbody></table>';
                     });
 
                     container.innerHTML = html;
                 })
                 .catch(e => {
+                    console.error(e);
                     document.getElementById('schedule-container').innerHTML = '<div class="text-danger">Erreur de chargement</div>';
                 });
         }

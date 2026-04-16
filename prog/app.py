@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import logging
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, stream_with_context, send_file
 import mimetypes
 import threading
 
@@ -235,7 +235,24 @@ def refresh():
 
 @app.route("/api/details/<nom_dossier>")
 def get_details(nom_dossier):
+    global CACHE_WATCHING, CACHE_PLANNING, CACHE_SUGGESTIONS, CACHE_COMPLETED
+    
     logger.info(f"[API] /api/details/{nom_dossier} - Looking up anime details")
+    
+    if not CACHE_WATCHING:
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+            logger.info(f"[API] Fetched {len(CACHE_WATCHING)} from CURRENT")
+        except Exception as e:
+            logger.error(f"[API] Failed to fetch CURRENT: {e}")
+    
+    if not CACHE_PLANNING:
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+            logger.info(f"[API] Fetched {len(CACHE_PLANNING)} from PLANNING")
+        except Exception as e:
+            logger.error(f"[API] Failed to fetch PLANNING: {e}")
+    
     logger.info(f"[API] Cache sizes - WATCHING: {len(CACHE_WATCHING)}, PLANNING: {len(CACHE_PLANNING)}, SUGGESTIONS: {len(CACHE_SUGGESTIONS)}, COMPLETED: {len(CACHE_COMPLETED)}")
 
     all_animes = CACHE_WATCHING + CACHE_PLANNING + CACHE_SUGGESTIONS + CACHE_COMPLETED
@@ -617,38 +634,55 @@ def downloads_page():
 
 @app.route("/api/downloads/dashboard")
 def downloads_dashboard():
+    global CACHE_WATCHING, CACHE_PLANNING
+    
+    if not CACHE_WATCHING:
+        try:
+            CACHE_WATCHING = logic.get_anilist_data(status="CURRENT")
+        except:
+            pass
+    
+    if not CACHE_PLANNING:
+        try:
+            CACHE_PLANNING = logic.get_anilist_data(status="PLANNING")
+        except:
+            pass
+    
     active_downloads = download_manager.get_active_downloads()
     
     all_animes = CACHE_WATCHING + CACHE_PLANNING
-    available_episodes = []
+    available_by_anime = {}
     
     anime_dir = get_anime_dir()
     for anime in all_animes:
         nom_dossier = anime["nom_dossier"]
+        progress = anime.get("progress", 0)
+        sortie = anime.get("sortie", 0)
         path = os.path.join(anime_dir, nom_dossier)
         
-        if not os.path.exists(path):
-            for ep in range(1, anime["sortie"] + 1):
-                available_episodes.append({
-                    "nom_dossier": nom_dossier,
-                    "nom_complet": anime["nom_complet"],
-                    "ep": ep,
-                    "img": anime["img"]
-                })
-        else:
-            existing = {int(f.replace(".mp4", "")) for f in os.listdir(path) if f.endswith(".mp4")}
-            for ep in range(1, anime["sortie"] + 1):
-                if ep not in existing:
-                    available_episodes.append({
-                        "nom_dossier": nom_dossier,
-                        "nom_complet": anime["nom_complet"],
-                        "ep": ep,
-                        "img": anime["img"]
-                    })
+        existing_eps = set()
+        if os.path.exists(path):
+            existing_eps = {int(f.replace(".mp4", "")) for f in os.listdir(path) if f.endswith(".mp4")}
+        
+        available_eps = []
+        for ep in range(1, sortie + 1):
+            if ep in existing_eps:
+                continue
+            if ep <= progress:
+                continue
+            available_eps.append(ep)
+        
+        if available_eps:
+            available_by_anime[nom_dossier] = {
+                "nom_dossier": nom_dossier,
+                "nom_complet": anime["nom_complet"],
+                "episodes": sorted(available_eps),
+                "img": anime["img"]
+            }
     
     return jsonify({
         "active": active_downloads,
-        "available": available_episodes
+        "available": list(available_by_anime.values())
     })
 
 
@@ -697,6 +731,23 @@ def cleanup_delete():
         except Exception as e:
             logger.error(f"Failed to delete {folder}: {e}")
     return jsonify({"success": True, "deleted": deleted})
+
+
+@app.route("/api/cleanup/cover")
+def cleanup_cover():
+    folder_name = request.args.get("path", "")
+    anime_dir = get_anime_dir()
+    folder_path = os.path.join(anime_dir, folder_name)
+    
+    cover_jpg = os.path.join(folder_path, "cover.jpg")
+    cover_png = os.path.join(folder_path, "cover.png")
+    
+    if os.path.exists(cover_jpg):
+        return send_file(cover_jpg)
+    elif os.path.exists(cover_png):
+        return send_file(cover_png)
+    
+    return "", 404
 
 
 @app.errorhandler(404)

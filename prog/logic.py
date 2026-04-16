@@ -160,7 +160,7 @@ def get_seasonal_suggestions():
     query = """
     query ($season: MediaSeason, $seasonYear: Int) {
       Page(page: 1, perPage: 50) {
-        media(season: $season, seasonYear: $seasonYear, sort: SCORE_DESC, type: ANIME, isAdult: false) {
+        media(season: $season, seasonYear: $seasonYear, sort: [SCORE_DESC], type: ANIME, isAdult: false) {
           id title { romaji english } episodes nextAiringEpisode { episode } siteUrl coverImage { large }
         }
       }
@@ -549,6 +549,11 @@ def cache_cover(anime_data):
         return False
     
     anime_dir = os.path.join(ANIME_DIR, nom_dossier)
+    
+    has_videos = any(f.endswith(".mp4") or f.endswith(".mkv") for f in os.listdir(anime_dir)) if os.path.exists(anime_dir) else False
+    if not has_videos:
+        return False
+    
     os.makedirs(anime_dir, exist_ok=True)
     
     cover_path_jpg = os.path.join(anime_dir, "cover.jpg")
@@ -601,17 +606,19 @@ def get_local_cover_path(nom_dossier):
 
 
 def get_airing_schedule(username="Pate0Sucre"):
-    query = """
-    query ($userName: String, $weeks: Int) {
-      MediaListCollection(userName: $userName, type: ANIME, status_in: [CURRENT, PLANNING]) {
-        lists { entries { media { id title { romaji english } nextAiringEpisode { episode airingAt } coverImage { large } } } }
-      }
-    }
-    """
     try:
         resp = requests.post(
             "https://graphql.anilist.co",
-            json={"query": query, "variables": {"userName": username, "weeks": 2}},
+            json={
+                "query": """
+                query ($userName: String) {
+                  MediaListCollection(userName: $userName, type: ANIME, status_in: [CURRENT, PLANNING]) {
+                    lists { entries { progress media { id title { romaji english } nextAiringEpisode { episode airingAt } coverImage { large } } } }
+                  }
+                }
+                """,
+                "variables": {"userName": username}
+            },
             timeout=15
         )
         resp.raise_for_status()
@@ -627,12 +634,16 @@ def get_airing_schedule(username="Pate0Sucre"):
             for entry in liste["entries"]:
                 media = entry["media"]
                 next_ep = media.get("nextAiringEpisode")
-                if next_ep:
+                if next_ep and next_ep.get("airingAt"):
+                    airing_ts = next_ep["airingAt"]
+                    dt = datetime.datetime.fromtimestamp(airing_ts)
                     schedule.append({
                         "id": media["id"],
                         "title": media["title"].get("romaji") or media["title"].get("english", "Unknown"),
-                        "episode": next_ep["episode"],
-                        "airing_at": next_ep["airingAt"],
+                        "episode": next_ep.get("episode", 0),
+                        "airing_at": airing_ts,
+                        "airing_time_formatted": dt.strftime("%d/%m/%Y %H:%M"),
+                        "airing_day": dt.strftime("%A %d %B"),
                         "cover": media["coverImage"]["large"]
                     })
         
@@ -644,19 +655,21 @@ def get_airing_schedule(username="Pate0Sucre"):
 
 
 def scan_cleanup():
-    watched_ids = set()
+    watched_nom_dossiers = set()
     try:
         for status in ["CURRENT", "PLANNING", "COMPLETED"]:
             data = get_anilist_data(status=status)
-            watched_ids.update(anime["id"] for anime in data)
+            for anime in data:
+                watched_nom_dossiers.add(anime["nom_dossier"])
     except Exception:
         pass
     
     empty_folders = []
+    empty_on_list = []
     orphaned_folders = []
     
     if not os.path.exists(ANIME_DIR):
-        return {"empty": [], "orphaned": []}
+        return {"empty": [], "empty_on_list": [], "orphaned": []}
     
     for folder in os.listdir(ANIME_DIR):
         folder_path = os.path.join(ANIME_DIR, folder)
@@ -665,25 +678,27 @@ def scan_cleanup():
         
         has_videos = any(f.endswith(".mp4") or f.endswith(".mkv") for f in os.listdir(folder_path))
         
+        cover_jpg = os.path.join(folder_path, "cover.jpg")
+        cover_png = os.path.join(folder_path, "cover.png")
+        local_cover = cover_jpg if os.path.exists(cover_jpg) else (cover_png if os.path.exists(cover_png) else None)
+        
+        folder_info = {
+            "name": folder,
+            "type": "empty" if not has_videos else "orphaned",
+            "cover": local_cover
+        }
+        
         if not has_videos:
-            empty_folders.append({"name": folder, "type": "empty"})
+            base_folder = folder.replace("_FR", "")
+            if base_folder in watched_nom_dossiers:
+                folder_info["type"] = "empty_on_list"
+                empty_on_list.append(folder_info)
+            else:
+                empty_folders.append(folder_info)
         else:
-            base_name = folder.replace("_FR", "")
-            is_orphaned = True
-            
-            try:
-                anime_id = int(folder.split("_")[-1]) if folder.split("_")[-1].isdigit() else None
-                if anime_id and anime_id in watched_ids:
-                    is_orphaned = False
-            except:
-                pass
-            
-            for anime in watched_ids:
-                if base_name.lower() in str(anime).lower() or str(anime) in folder:
-                    is_orphaned = False
-                    break
-            
-            if is_orphaned:
-                orphaned_folders.append({"name": folder, "type": "orphaned"})
+            base_folder = folder.replace("_FR", "")
+            if base_folder in watched_nom_dossiers:
+                continue
+            orphaned_folders.append(folder_info)
     
-    return {"empty": empty_folders, "orphaned": orphaned_folders}
+    return {"empty": empty_folders, "empty_on_list": empty_on_list, "orphaned": orphaned_folders}
