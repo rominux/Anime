@@ -35,6 +35,13 @@ The system supports:
 
 ## Features
 
+### New in v3.0
+
+- **SQLite Database (SQLAlchemy)**: Local persistent storage for anime data, works offline
+- **Toast Notifications**: Bootstrap 5 toasts replace blocking alert() dialogs
+- **Play Next Overlay**: Manual trigger overlay appears in last 30s or when video ends
+- **Refined UI**: Horizontal list layout for schedule/cleanup/downloads pages
+
 ### New in v2.0
 
 - **Real-time Download Tracker**: Top-bar SSE-powered download progress display (auto-hides when idle)
@@ -63,6 +70,7 @@ AnimeProgTest/
 ├── app.py                 # Flask web server & API routes
 ├── logic.py               # AniList API + AnimeHeaven scraper
 ├── logic_fr.py            # Anime-Sama integration
+├── models.py              # SQLAlchemy database models
 ├── download_manager.py    # Unified thread-safe download manager
 ├── requirements.txt       # Python dependencies
 ├── .env                   # Environment configuration
@@ -72,7 +80,11 @@ AnimeProgTest/
 │   ├── index.html        # English interface
 │   ├── fr_index.html     # French interface
 │   ├── anilist_index.html# AniList management
-│   └── watch.html        # In-browser video player
+│   ├── watch.html        # In-browser video player
+│   ├── toast.html        # Toast notification component
+│   ├── schedule.html     # Release calendar
+│   ├── cleanup.html      # Storage cleanup
+│   └── downloads.html    # Downloads & calendar
 ├── src/                  # CLI downloader
 │   ├── main.py           # CLI entry point
 │   ├── var.py            # Configuration & constants
@@ -333,12 +345,27 @@ Flask streaming with HTTP Range headers:
 - Chunked transfer encoding
 - CORS headers for cross-origin access
 
+### SQLite Database
+
+The app uses SQLite for persistent storage:
+- Automatic sync from AniList on startup/refresh
+- Works offline - loads from local database if API unavailable
+- Stored in `anime_manager.db` in the app directory
+
+### Play Next Overlay
+
+In watch.html, when video ends or reaches last 30 seconds:
+- A styled overlay appears with "⏭️ Play Next Episode" button
+- User MUST click to advance - no automatic redirect
+- Shows next episode number dynamically
+
 ---
 
 ## Dependencies
 
 **Python Packages:**
 - `Flask>=3.0.0` - Web framework
+- `Flask-SQLAlchemy>=3.1.0` - SQLite database integration
 - `requests>=2.31.0` - HTTP client
 - `beautifulsoup4>=4.12.0` - HTML parsing
 - `cloudscraper>=1.2.71` - Cloudflare bypass

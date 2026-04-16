@@ -345,6 +345,7 @@
     </style>
 </head>
 <body>
+    {% include 'toast.html' %}
     <div class="top-bar">
         <button class="nav-btn" onclick="goBack()">&#11013;&#65039; Retour</button>
         <span class="anime-title">{{ anime_title }} - Ep {{ episode }}</span>
@@ -644,7 +645,7 @@
                     total_episodes: TOTAL_EPISODES || null
                 })
             });
-            alert('Progression synchronisée !');
+            showToast('Succès', 'Progression synchronisée !', 'success');
         }
 
         async function deleteWatched() {
@@ -660,13 +661,39 @@
                 })
             });
             loadEpisodeList();
+            showToast('Succès', 'Épisodes supprimés', 'success');
         }
 
+        const playNextOverlay = document.createElement('div');
+        playNextOverlay.id = 'playNextOverlay';
+        playNextOverlay.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 2px solid #ffc107;
+            box-shadow: 0 0 30px rgba(255,193,7,0.3);
+        `;
+        playNextOverlay.innerHTML = `
+            <div style="color: #ffc107; font-size: 2rem; margin-bottom: 15px;">⏭️</div>
+            <div style="color: white; font-size: 1.2rem; margin-bottom: 20px;">Épisode suivant disponible</div>
+            <button onclick="nextEpisode()" class="btn btn-warning btn-lg">Lire l'épisode ${NEXT_EP}</button>
+        `;
+        document.querySelector('.video-container').appendChild(playNextOverlay);
+
         video.addEventListener('ended', () => {
-            if (NEXT_EP) {
-                window.location.href = `/watch/${CURRENT_NOM_DOSSIER}/${NEXT_EP}`;
-            } else if (IS_LAST) {
-                completeSeason();
+            playNextOverlay.style.display = 'block';
+        });
+
+        video.addEventListener('timeupdate', () => {
+            if (video.duration && (video.duration - video.currentTime) <= 30 && NEXT_EP && playNextOverlay.style.display === 'none') {
+                playNextOverlay.style.display = 'block';
             }
         });
 

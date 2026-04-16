@@ -1,0 +1,45 @@
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+    <div id="toastPlaceholder"></div>
+</div>
+
+<script>
+function showToast(title, message, type = 'success') {
+    const toastId = 'toast-' + Date.now();
+    const bgClass = {
+        'success': 'bg-success',
+        'error': 'bg-danger',
+        'warning': 'bg-warning text-dark',
+        'info': 'bg-info text-dark'
+    }[type] || 'bg-secondary';
+    
+    const icon = {
+        'success': '✓',
+        'error': '✕',
+        'warning': '⚠',
+        'info': 'ℹ'
+    }[type] || 'ℹ';
+    
+    const html = `
+        <div class="toast show" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header ${bgClass} text-white">
+                <strong class="me-auto">${icon} ${title}</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" style="background-color: #2a2a3e; color: white;">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    const container = document.getElementById('toastPlaceholder');
+    container.insertAdjacentHTML('beforeend', html);
+    
+    const toastEl = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    toast.show();
+    
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
+}
+</script>

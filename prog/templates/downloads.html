@@ -8,13 +8,13 @@
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
         .nav-tabs .nav-link { color: #aaa; }
         .nav-tabs .nav-link.active { background-color: #2a2a3e; color: #fff; border-color: #3d3d5c; }
-        .episode-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; border-radius: 8px; }
-        .active-download { background: #1a3a1a; border-color: #28a745; }
-        .anime-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
-        .anime-title { font-weight: bold; color: #fff; }
-        .anime-meta { color: #8b8bb3; font-size: 0.9em; }
-        .anime-time { color: #ffc107; }
         .day-header { background: #3d3d5c; padding: 15px; border-radius: 8px; margin: 25px 0 15px; }
+        .folder-item { background: #2a2a3e; border: 1px solid #3d3d5c; border-radius: 8px; margin-bottom: 10px; padding: 12px; }
+        .folder-item.active-download { background: #1a3a1a; border-color: #28a745; }
+        .folder-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .folder-name { font-weight: bold; color: #fff; }
+        .folder-meta { color: #8b8bb3; font-size: 0.9em; }
+        .folder-time { color: #ffc107; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -91,13 +91,13 @@
                     const activeDiv = document.getElementById('active-downloads');
                     if (data.active && data.active.length > 0) {
                         activeDiv.innerHTML = data.active.map(d => `
-                            <div class="card episode-card active-download p-3 d-flex align-items-center">
+                            <div class="folder-item active-download d-flex align-items-center">
                                 <div class="me-3">
                                     <div class="spinner-border spinner-border-sm text-success" role="status"></div>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div class="text-light fw-bold">${d.name || d.key}</div>
-                                    <div class="text-success">${d.progress || 0}%</div>
+                                    <div class="folder-name">${d.name || d.key}</div>
+                                    <div class="folder-meta text-success">${d.progress || 0}%</div>
                                 </div>
                             </div>
                         `).join('');
@@ -108,11 +108,11 @@
                     const availDiv = document.getElementById('available-downloads');
                     if (data.available && data.available.length > 0) {
                         availDiv.innerHTML = data.available.map(a => `
-                            <div class="card episode-card p-3 d-flex align-items-center">
-                                <img src="${a.local_cover || a.img || ''}" class="anime-cover me-3" onerror="this.src='${a.img || ''}'" />
+                            <div class="folder-item d-flex align-items-center">
+                                <img src="${a.local_cover || a.img || ''}" class="folder-cover me-3" onerror="this.src='${a.img || ''}'" />
                                 <div class="flex-grow-1">
-                                    <div class="anime-title">${getEnglishTitle(a.nom_complet)}</div>
-                                    <div class="anime-meta">Épisodes: ${formatEpisodeRange(a.episodes)}</div>
+                                    <div class="folder-name">${getEnglishTitle(a.nom_complet)}</div>
+                                    <div class="folder-meta">Épisodes: ${formatEpisodeRange(a.episodes)}</div>
                                 </div>
                                 <a href="/en" class="btn btn-sm btn-outline-primary">Télécharger</a>
                             </div>
@@ -135,13 +135,13 @@
                         
                         dayBlock.animes.forEach(item => {
                             html += `
-                                <div class="card episode-card p-3 d-flex align-items-center">
-                                    <img src="${item.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                                <div class="folder-item d-flex align-items-center">
+                                    <img src="${item.cover || ''}" class="folder-cover me-3" onerror="this.style.display='none'" />
                                     <div class="flex-grow-1">
-                                        <div class="anime-title">${item.title}</div>
-                                        <div class="anime-meta">Épisode ${item.episode} - ${dayBlock.day_name}</div>
+                                        <div class="folder-name">${item.title}</div>
+                                        <div class="folder-meta">Épisode ${item.episode} - ${dayBlock.day_name}</div>
                                     </div>
-                                    <div class="anime-time">${item.airing_time}</div>
+                                    <div class="folder-time">${item.airing_time}</div>
                                 </div>
                             `;
                         });

@@ -23,6 +23,7 @@
     </style>
 </head>
 <body>
+    {% include 'toast.html' %}
     <div class="container">
         <a href="/" class="btn btn-outline-light mb-4">← Menu Principal</a>
         <h2 class="mb-4">🧹 Nettoyage Stockage</h2>
@@ -144,7 +145,7 @@
             const folders = Array.from(checkboxes).map(cb => cb.dataset.folder);
             
             if (folders.length === 0) {
-                alert('Sélectionnez au moins un dossier à supprimer');
+                showToast('Attention', 'Sélectionnez au moins un dossier à supprimer', 'warning');
                 return;
             }
 
@@ -159,11 +160,11 @@
             })
             .then(r => r.json())
             .then(data => {
-                alert(`Supprimé(s): ${data.deleted.join(', ')}`);
+                showToast('Succès', `Supprimé(s): ${data.deleted.join(', ')}`, 'success');
                 scanFolders();
             })
             .catch(e => {
-                alert('Erreur lors de la suppression');
+                showToast('Erreur', 'Erreur lors de la suppression', 'error');
             });
         }
     </script>
