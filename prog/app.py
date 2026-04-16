@@ -50,7 +50,6 @@ def sync_anilist_to_db():
                 with app.app_context():
                     anime = Anime.upsert_from_anilist(anime_data)
                     anime.status = status
-                    db.session.commit()
                     
                     nom_dossier = anime_data.get('nom_dossier')
                     if nom_dossier:
@@ -62,7 +61,7 @@ def sync_anilist_to_db():
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
                             elif os.path.exists(cover_png):
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
-                            db.session.commit()
+                    anime.touch()
         
         logger.info("[SYNC] AniList sync completed")
         return True
@@ -378,7 +377,7 @@ def api_complete_season():
     if anime:
         anime.status = 'COMPLETED'
         anime.progress = anime.total_episodes
-        db.session.commit()
+        anime.touch()
         
         threading.Thread(
             target=logic.update_anilist_entry,
@@ -440,7 +439,7 @@ def change_status():
     anime = Anime.query.filter_by(anilist_id=media_id).first() if media_id else None
     if anime:
         anime.status = new_status
-        db.session.commit()
+        anime.touch()
     
     logic.update_anilist_status(media_id, new_status)
     return jsonify({"success": True})

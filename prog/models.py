@@ -51,6 +51,10 @@ class Anime(db.Model):
         return Anime.query.filter_by(status=status).order_by(Anime.updated_at.desc()).all()
     
     @staticmethod
+    def get_all_ordered():
+        return Anime.query.order_by(Anime.updated_at.desc()).all()
+    
+    @staticmethod
     def get_by_dossier(nom_dossier):
         return Anime.query.filter_by(nom_dossier=nom_dossier).first()
     
@@ -71,14 +75,21 @@ class Anime(db.Model):
         anime.progress = data.get('progress', 0)
         anime.cover_image = data.get('img')
         anime.lien = data.get('lien')
+        anime.updated_at = datetime.utcnow()
         
         return anime
     
     def update_progress(self, episode):
         if episode > self.progress:
             self.progress = episode
+            self.updated_at = datetime.utcnow()
         if self.total_episodes and episode >= self.total_episodes:
             self.status = 'COMPLETED'
+            self.updated_at = datetime.utcnow()
+        db.session.commit()
+    
+    def touch(self):
+        self.updated_at = datetime.utcnow()
         db.session.commit()
     
     def delete(self):
