@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
@@ -97,6 +98,34 @@ class Anime(db.Model):
     
     def delete(self):
         db.session.delete(self)
+        db.session.commit()
+
+
+class ScheduleCache(db.Model):
+    __tablename__ = 'schedule_cache'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    @staticmethod
+    def get_schedule():
+        cache = ScheduleCache.query.first()
+        if cache and cache.data:
+            try:
+                return json.loads(cache.data)
+            except:
+                return []
+        return []
+    
+    @staticmethod
+    def save_schedule(schedule_data):
+        cache = ScheduleCache.query.first()
+        if not cache:
+            cache = ScheduleCache()
+            db.session.add(cache)
+        cache.data = json.dumps(schedule_data)
+        cache.updated_at = datetime.utcnow()
         db.session.commit()
 
 

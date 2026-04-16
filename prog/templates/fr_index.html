@@ -366,8 +366,33 @@
                     });
                 })
                 .catch(() => {
-                    grid.innerHTML = "<div class='text-danger text-center w-100 my-4'>Erreur.</div>";
+                    if (currentLocalDetails && currentLocalDetails.episodes && currentLocalDetails.episodes.length > 0) {
+                        renderLocalEpisodes(currentLocalDetails.episodes);
+                    } else {
+                        grid.innerHTML = "<div class='text-danger text-center w-100 my-4'>Erreur. Aucun episode local trouve.</div>";
+                    }
                 });
+        }
+
+        function renderLocalEpisodes(episodes) {
+            const grid = document.getElementById("epGrid");
+            grid.innerHTML = "";
+            
+            if (!episodes || episodes.length === 0) {
+                grid.innerHTML = "<div class='text-warning text-center w-100 my-4'>Aucun episode local.</div>";
+                return;
+            }
+
+            episodes.forEach(ep => {
+                let boxClass = `status-${ep.status}`;
+                const div = document.createElement("div");
+                div.className = `ep-box ${boxClass}`;
+                div.innerText = ep.ep;
+                div.onclick = () => {
+                    window.location.href = `/watch/${currentNomDossierFR}/${ep.ep}`;
+                };
+                grid.appendChild(div);
+            });
         }
 
         function loadEpisodes(url) {
@@ -532,7 +557,7 @@
             });
         }
 
-        function openAnimeSamaDirect(title, url) {
+function openAnimeSamaDirect(title, url) {
             currentAnimeTitle = title;
             let currentNomDossierBase = title.replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
 
@@ -549,7 +574,70 @@
                     currentNomDossierFR = localData.nom_dossier_fr;
                     loadEpisodes(url);
                 })
-                .catch(() => { currentLocalDetails = null; loadEpisodes(url); });
+                .catch(() => { 
+                    currentLocalDetails = null; 
+                    currentNomDossierFR = currentNomDossierBase + "_FR";
+                    loadEpisodes(url);
+                });
+        }
+
+        function loadEpisodes(url) {
+            const grid = document.getElementById("epGrid");
+            grid.innerHTML = "<div class='w-100 text-center my-4'>&#8987; R&#233;cup&#233;ration des &#233;pisodes...</div>";
+
+            fetch('/api/fr/details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            }).then(r => r.json())
+              .then(data => renderEpisodesGrid(data))
+              .catch(() => {
+                  if (currentLocalDetails && currentLocalDetails.episodes && currentLocalDetails.episodes.length > 0) {
+                      renderLocalEpisodes(currentLocalDetails.episodes);
+                  } else {
+                      grid.innerHTML = "<div class='text-danger text-center w-100 my-4'>Erreur de connexion.</div>";
+                  }
+              });
+        }
+
+        function renderEpisodesGrid(data) {
+            const grid = document.getElementById("epGrid");
+            grid.innerHTML = "";
+
+            if (!data.episodes || data.episodes.length === 0) {
+                grid.innerHTML = "<div class='text-warning text-center w-100 my-4'>Aucun &#233;pisode trouv&#233;.</div>";
+                return;
+            }
+
+            data.episodes.forEach(ep => {
+                let isLocal = false;
+                let boxClass = "status-released";
+
+                if (currentLocalDetails && currentLocalDetails.episodes) {
+                    const localMatch = currentLocalDetails.episodes.find(e => e.ep == ep.ep);
+                    if (localMatch) {
+                        isLocal = true;
+                        boxClass = `status-${localMatch.status}`;
+                    }
+                }
+
+                const epObj = { ep: ep.ep, url: ep.url, isLocal: isLocal };
+
+                const div = document.createElement("div");
+                div.className = `ep-box ${boxClass}`;
+                div.innerText = ep.ep;
+                if (isLocal) {
+                    div.onclick = () => {
+                        window.location.href = `/watch/${currentNomDossierFR}/${ep.ep}`;
+                    };
+                } else if (ep.status === 'released') {
+                    div.onclick = () => toggleSelect(div, epObj);
+                } else {
+                    div.style.cursor = "default";
+                    div.style.opacity = "0.6";
+                }
+                grid.appendChild(div);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', initDownloadTracker);

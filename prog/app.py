@@ -5,6 +5,7 @@ import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, stream_with_context, send_file
 import mimetypes
 import threading
+import requests
 
 from dotenv import load_dotenv
 
@@ -20,7 +21,7 @@ from src.var import (
     get_flask_port,
     get_flask_debug,
 )
-from models import db, Anime, init_db
+from models import db, Anime, ScheduleCache, init_db
 
 logger = setup_logging()
 app_logger = logging.getLogger("werkzeug")
@@ -63,8 +64,19 @@ def sync_anilist_to_db():
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
                     db.session.commit()
         
+        try:
+            schedule_data = logic.get_airing_schedule()
+            if schedule_data:
+                ScheduleCache.save_schedule(schedule_data)
+                logger.info("[SYNC] Schedule cached successfully")
+        except Exception as e:
+            logger.warning(f"[SYNC] Failed to cache schedule: {e}")
+        
         logger.info("[SYNC] AniList sync completed")
         return True
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"[SYNC] No internet connection: {e}")
+        return False
     except Exception as e:
         logger.error(f"[SYNC] Failed to sync: {e}")
         return False
@@ -545,7 +557,9 @@ def schedule_page():
 @app.route("/api/schedule")
 def api_schedule():
     try:
-        schedule_data = logic.get_airing_schedule()
+        schedule_data = ScheduleCache.get_schedule()
+        if not schedule_data:
+            return jsonify({"success": False, "error": "No schedule cached. Connect to internet and refresh."})
         return jsonify({"success": True, "schedule": schedule_data})
     except Exception as e:
         logger.error(f"Failed to fetch schedule: {e}")
@@ -560,7 +574,11 @@ def cleanup_page():
 @app.route("/api/cleanup/scan")
 def cleanup_scan():
     try:
-        result = logic.scan_cleanup()
+        watching_folders = [a.nom_dossier for a in Anime.query.filter_by(status='CURRENT').all() if a.nom_dossier]
+        planning_folders = [a.nom_dossier for a in Anime.query.filter_by(status='PLANNING').all() if a.nom_dossier]
+        completed_folders = [a.nom_dossier for a in Anime.query.filter_by(status='COMPLETED').all() if a.nom_dossier]
+        
+        result = logic.scan_cleanup(watching_folders, planning_folders, completed_folders)
         return jsonify({"success": True, "data": result})
     except Exception as e:
         logger.error(f"Cleanup scan failed: {e}")

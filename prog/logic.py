@@ -697,18 +697,10 @@ def get_airing_schedule(username="Pate0Sucre"):
         return []
 
 
-def scan_cleanup():
-    watching_nom_dossiers = set()
-    planning_nom_dossiers = set()
-    completed_nom_dossiers = set()
-    
-    try:
-        for status, target_set in [("CURRENT", watching_nom_dossiers), ("PLANNING", planning_nom_dossiers), ("COMPLETED", completed_nom_dossiers)]:
-            data = get_anilist_data(status=status)
-            for anime in data:
-                target_set.add(anime["nom_dossier"])
-    except Exception:
-        pass
+def scan_cleanup(watching_folders=None, planning_folders=None, completed_folders=None):
+    watching_nom_dossiers = set(watching_folders or [])
+    planning_nom_dossiers = set(planning_folders or [])
+    completed_nom_dossiers = set(completed_folders or [])
     
     empty_folders = []
     empty_on_list = []
