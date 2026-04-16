@@ -6,12 +6,20 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
-        .folder-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; }
-        .empty-folder { border-color: #dc3545; }
-        .empty-on-list { border-color: #6c757d; }
-        .orphaned-folder { border-color: #ffc107; }
+        .folder-item { background: #2a2a3e; border: 1px solid #3d3d5c; border-radius: 8px; margin-bottom: 10px; padding: 12px; }
+        .folder-item.empty-folder { border-color: #dc3545; }
+        .folder-item.empty-on-list { border-color: #6c757d; }
+        .folder-item.orphaned-folder { border-color: #ffc107; }
+        .folder-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .folder-name { font-weight: bold; color: #fff; }
+        .folder-status { font-size: 0.9em; padding: 4px 8px; border-radius: 4px; }
+        .status-watching { background: #0d6efd; color: #fff; }
+        .status-planning { background: #6f42c1; color: #fff; }
+        .status-completed { background: #198754; color: #fff; }
+        .status-autre { background: #6c757d; color: #fff; }
+        .status-empty { background: #dc3545; color: #fff; }
+        .status-orphelin { background: #ffc107; color: #000; }
         .checkbox-wrapper input { width: 20px; height: 20px; }
-        .folder-cover { width: 50px; height: 70px; object-fit: cover; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -52,17 +60,41 @@
                 });
         }
 
-        function renderFolderCard(f, label, labelClass) {
+        function getStatusBadge(status, type) {
+            const statusClass = {
+                'Watching': 'status-watching',
+                'Planning': 'status-planning',
+                'Completed': 'status-completed',
+                'Orphelin': 'status-orphelin'
+            };
+            const label = status === 'Orphelin' ? 'Orphelin' : status;
+            return `<span class="folder-status ${statusClass[status] || 'status-autre'}">${label}</span>`;
+        }
+
+        function getFolderTypeLabel(type, status) {
+            if (type === 'empty') return 'Dossier vide';
+            if (type === 'empty_on_list') return 'Aucun épisode téléchargé';
+            if (type === 'orphaned') return 'Non suivi dans vos listes';
+            return '';
+        }
+
+        function renderFolderCard(f) {
             const coverImg = f.cover ? `<img src="/api/cleanup/cover?path=${encodeURIComponent(f.name)}" class="folder-cover me-3" onerror="this.style.display='none'" />` : '';
+            const typeClass = f.type === 'empty' ? 'empty-folder' : (f.type === 'empty_on_list' ? 'empty-on-list' : 'orphaned-folder');
+            const typeLabel = getFolderTypeLabel(f.type, f.status);
+            
             return `
-                <div class="card folder-card ${f.type === 'empty' ? 'empty-folder' : (f.type === 'empty_on_list' ? 'empty-on-list' : 'orphaned-folder')} p-3 d-flex align-items-center">
+                <div class="folder-item ${typeClass} d-flex align-items-center">
                     <div class="checkbox-wrapper me-3">
                         <input type="checkbox" data-folder="${f.name}" />
                     </div>
                     ${coverImg}
-                    <div>
-                        <div class="text-light fw-bold">${f.name}</div>
-                        <div class="${labelClass} small">${label}</div>
+                    <div class="flex-grow-1">
+                        <div class="folder-name">${f.name}</div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            ${getStatusBadge(f.status, f.type)}
+                            <span class="text-secondary small">${typeLabel}</span>
+                        </div>
                     </div>
                 </div>
             `;
@@ -85,21 +117,21 @@
             if (data.empty_on_list && data.empty_on_list.length > 0) {
                 html += '<h5 class="text-secondary mt-4">Dossiers vides (encore dans vos listes)</h5>';
                 data.empty_on_list.forEach(f => {
-                    html += renderFolderCard(f, 'Aucun épisode téléchargé', 'text-secondary');
+                    html += renderFolderCard(f);
                 });
             }
 
             if (data.empty && data.empty.length > 0) {
                 html += '<h5 class="text-danger mt-4">Dossiers vides</h5>';
                 data.empty.forEach(f => {
-                    html += renderFolderCard(f, 'Aucun fichier vidéo', 'text-danger');
+                    html += renderFolderCard(f);
                 });
             }
 
             if (data.orphaned && data.orphaned.length > 0) {
                 html += '<h5 class="text-warning mt-4">Dossiers orphelins (non dans vos listes)</h5>';
                 data.orphaned.forEach(f => {
-                    html += renderFolderCard(f, 'Dossier avec épisodes mais non suivi', 'text-warning');
+                    html += renderFolderCard(f);
                 });
             }
 

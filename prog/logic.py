@@ -613,7 +613,7 @@ def get_airing_schedule(username="Pate0Sucre"):
                 "query": """
                 query ($userName: String) {
                   MediaListCollection(userName: $userName, type: ANIME, status_in: [CURRENT, PLANNING]) {
-                    lists { entries { progress media { id title { romaji english } nextAiringEpisode { episode airingAt } coverImage { large } } } }
+                    lists { entries { status progress media { id title { romaji english } nextAiringEpisode { episode airingAt } coverImage { large } } } }
                   }
                 }
                 """,
@@ -627,40 +627,85 @@ def get_airing_schedule(username="Pate0Sucre"):
         logger.error(f"Failed to fetch airing schedule: {e}")
         return []
     
-    schedule = []
+    schedule_by_day = {}
+    day_names_en = {
+        "Monday": "Lundi",
+        "Tuesday": "Mardi",
+        "Wednesday": "Mercredi",
+        "Thursday": "Jeudi",
+        "Friday": "Vendredi",
+        "Saturday": "Samedi",
+        "Sunday": "Dimanche"
+    }
+    month_names_en = {
+        "January": "Janvier", "February": "Février", "March": "Mars",
+        "April": "Avril", "May": "Mai", "June": "Juin",
+        "July": "Juillet", "August": "Août", "September": "Septembre",
+        "October": "Octobre", "November": "Novembre", "December": "Décembre"
+    }
+    
+    now = datetime.datetime.now()
+    today_ts = int(now.timestamp())
+    week_later_ts = int((now + datetime.timedelta(days=7)).timestamp())
+    
     try:
         lists = data.get("data", {}).get("MediaListCollection", {}).get("lists", [])
         for liste in lists:
             for entry in liste["entries"]:
                 media = entry["media"]
+                entry_status = entry.get("status", "CURRENT")
                 next_ep = media.get("nextAiringEpisode")
                 if next_ep and next_ep.get("airingAt"):
                     airing_ts = next_ep["airingAt"]
+                    if airing_ts < today_ts or airing_ts > week_later_ts:
+                        continue
                     dt = datetime.datetime.fromtimestamp(airing_ts)
-                    schedule.append({
+                    day_key = dt.strftime("%Y-%m-%d")
+                    day_display = day_names_en.get(dt.strftime("%A"), dt.strftime("%A"))
+                    
+                    if day_key not in schedule_by_day:
+                        month_en = dt.strftime("%B")
+                        month_fr = month_names_en.get(month_en, month_en)
+                        schedule_by_day[day_key] = {
+                            "day_name": day_display,
+                            "day_num": dt.day,
+                            "month": month_fr,
+                            "animes": []
+                        }
+                    
+                    schedule_by_day[day_key]["animes"].append({
                         "id": media["id"],
                         "title": media["title"].get("romaji") or media["title"].get("english", "Unknown"),
                         "episode": next_ep.get("episode", 0),
                         "airing_at": airing_ts,
-                        "airing_time_formatted": dt.strftime("%d/%m/%Y %H:%M"),
-                        "airing_day": dt.strftime("%A %d %B"),
-                        "cover": media["coverImage"]["large"]
+                        "airing_time": dt.strftime("%H:%M"),
+                        "airing_date": dt.strftime("%d/%m/%Y"),
+                        "cover": media["coverImage"]["large"],
+                        "status": entry_status
                     })
         
-        schedule.sort(key=lambda x: x["airing_at"])
-        return schedule
+        result = []
+        for day_key in sorted(schedule_by_day.keys()):
+            day_data = schedule_by_day[day_key]
+            day_data["animes"].sort(key=lambda x: x["airing_at"])
+            result.append(day_data)
+        
+        return result
     except (KeyError, TypeError) as e:
         logger.error(f"Failed to parse schedule: {e}")
         return []
 
 
 def scan_cleanup():
-    watched_nom_dossiers = set()
+    watching_nom_dossiers = set()
+    planning_nom_dossiers = set()
+    completed_nom_dossiers = set()
+    
     try:
-        for status in ["CURRENT", "PLANNING", "COMPLETED"]:
+        for status, target_set in [("CURRENT", watching_nom_dossiers), ("PLANNING", planning_nom_dossiers), ("COMPLETED", completed_nom_dossiers)]:
             data = get_anilist_data(status=status)
             for anime in data:
-                watched_nom_dossiers.add(anime["nom_dossier"])
+                target_set.add(anime["nom_dossier"])
     except Exception:
         pass
     
@@ -682,22 +727,31 @@ def scan_cleanup():
         cover_png = os.path.join(folder_path, "cover.png")
         local_cover = cover_jpg if os.path.exists(cover_jpg) else (cover_png if os.path.exists(cover_png) else None)
         
+        base_folder = folder.replace("_FR", "")
+        
+        folder_status = "Orphelin"
+        if base_folder in watching_nom_dossiers:
+            folder_status = "Watching"
+        elif base_folder in planning_nom_dossiers:
+            folder_status = "Planning"
+        elif base_folder in completed_nom_dossiers:
+            folder_status = "Completed"
+        
         folder_info = {
             "name": folder,
             "type": "empty" if not has_videos else "orphaned",
-            "cover": local_cover
+            "cover": local_cover,
+            "status": folder_status
         }
         
         if not has_videos:
-            base_folder = folder.replace("_FR", "")
-            if base_folder in watched_nom_dossiers:
+            if folder_status != "Orphelin":
                 folder_info["type"] = "empty_on_list"
                 empty_on_list.append(folder_info)
             else:
                 empty_folders.append(folder_info)
         else:
-            base_folder = folder.replace("_FR", "")
-            if base_folder in watched_nom_dossiers:
+            if folder_status != "Orphelin":
                 continue
             orphaned_folders.append(folder_info)
     

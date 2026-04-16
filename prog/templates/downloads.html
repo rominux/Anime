@@ -8,10 +8,13 @@
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
         .nav-tabs .nav-link { color: #aaa; }
         .nav-tabs .nav-link.active { background-color: #2a2a3e; color: #fff; border-color: #3d3d5c; }
-        .episode-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; }
+        .episode-card { background: #2a2a3e; border: 1px solid #3d3d5c; margin-bottom: 10px; border-radius: 8px; }
         .active-download { background: #1a3a1a; border-color: #28a745; }
-        .available-download { background: #2a2a3e; }
-        .anime-cover { width: 60px; height: 85px; object-fit: cover; border-radius: 4px; }
+        .anime-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .anime-title { font-weight: bold; color: #fff; }
+        .anime-meta { color: #8b8bb3; font-size: 0.9em; }
+        .anime-time { color: #ffc107; }
+        .day-header { background: #3d3d5c; padding: 15px; border-radius: 8px; margin: 25px 0 15px; }
     </style>
 </head>
 <body>
@@ -49,15 +52,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        function getEnglishTitle(nomComplet) {
+            if (!nomComplet) return '';
+            const parts = nomComplet.split(' ;;; ');
+            return parts.length > 1 ? parts[1].trim() : parts[0].trim();
+        }
+
         function formatEpisodeRange(eps) {
             if (!eps || eps.length === 0) return '';
-            if (eps.length === 1) return eps[0].toString();
-            
             eps = [...eps].sort((a, b) => a - b);
             let ranges = [];
             let start = eps[0];
             let end = eps[0];
-            
             for (let i = 1; i < eps.length; i++) {
                 if (eps[i] === end + 1) {
                     end = eps[i];
@@ -78,12 +84,6 @@
             return ranges.join(', ');
         }
 
-        function getEnglishTitle(nomComplet) {
-            if (!nomComplet) return '';
-            const parts = nomComplet.split(' ;;; ');
-            return parts.length > 1 ? parts[1].trim() : parts[0].trim();
-        }
-
         function loadDashboard() {
             fetch('/api/downloads/dashboard')
                 .then(r => r.json())
@@ -91,15 +91,13 @@
                     const activeDiv = document.getElementById('active-downloads');
                     if (data.active && data.active.length > 0) {
                         activeDiv.innerHTML = data.active.map(d => `
-                            <div class="card episode-card active-download p-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="me-3">
-                                        <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                                    </div>
-                                    <div>
-                                        <strong class="text-light">${d.name || d.key}</strong>
-                                        <div class="text-success">${d.progress || 0}%</div>
-                                    </div>
+                            <div class="card episode-card active-download p-3 d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="text-light fw-bold">${d.name || d.key}</div>
+                                    <div class="text-success">${d.progress || 0}%</div>
                                 </div>
                             </div>
                         `).join('');
@@ -110,13 +108,13 @@
                     const availDiv = document.getElementById('available-downloads');
                     if (data.available && data.available.length > 0) {
                         availDiv.innerHTML = data.available.map(a => `
-                            <div class="card episode-card available-download p-3 d-flex align-items-center">
-                                <img src="${a.img || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                            <div class="card episode-card p-3 d-flex align-items-center">
+                                <img src="${a.local_cover || a.img || ''}" class="anime-cover me-3" onerror="this.src='${a.img || ''}'" />
                                 <div class="flex-grow-1">
-                                    <div class="text-light fw-bold">${getEnglishTitle(a.nom_complet)}</div>
-                                    <div class="text-info">Épisodes: ${formatEpisodeRange(a.episodes)}</div>
+                                    <div class="anime-title">${getEnglishTitle(a.nom_complet)}</div>
+                                    <div class="anime-meta">Épisodes: ${formatEpisodeRange(a.episodes)}</div>
                                 </div>
-                                <a href="/en" class="btn btn-sm btn-primary">Voir</a>
+                                <a href="/en" class="btn btn-sm btn-outline-primary">Télécharger</a>
                             </div>
                         `).join('');
                     } else {
@@ -131,19 +129,24 @@
             .then(data => {
                 const scheduleDiv = document.getElementById('schedule-list');
                 if (data.success && data.schedule && data.schedule.length > 0) {
-                    scheduleDiv.innerHTML = data.schedule.map(s => {
-                        const date = new Date(s.airing_at * 1000);
-                        return `
-                            <div class="card episode-card p-3 d-flex align-items-center">
-                                <img src="${s.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
-                                <div class="flex-grow-1">
-                                    <div class="text-light fw-bold">${s.title}</div>
-                                    <div class="text-info">Épisode ${s.episode}</div>
+                    let html = '';
+                    data.schedule.forEach(dayBlock => {
+                        html += `<div class="day-header"><h5 class="mb-0">${dayBlock.day_name} ${dayBlock.day_num} ${dayBlock.month}</h5></div>`;
+                        
+                        dayBlock.animes.forEach(item => {
+                            html += `
+                                <div class="card episode-card p-3 d-flex align-items-center">
+                                    <img src="${item.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                                    <div class="flex-grow-1">
+                                        <div class="anime-title">${item.title}</div>
+                                        <div class="anime-meta">Épisode ${item.episode} - ${dayBlock.day_name}</div>
+                                    </div>
+                                    <div class="anime-time">${item.airing_time}</div>
                                 </div>
-                                <div class="text-warning">${date.toLocaleDateString('fr-FR')} ${date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</div>
-                            </div>
-                        `;
-                    }).join('');
+                            `;
+                        });
+                    });
+                    scheduleDiv.innerHTML = html;
                 } else {
                     scheduleDiv.innerHTML = '<div class="text-secondary">Aucune upcoming release</div>';
                 }

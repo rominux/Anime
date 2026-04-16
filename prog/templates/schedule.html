@@ -6,13 +6,12 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
-        .schedule-table { background: #2a2a3e; border-collapse: separate; border-spacing: 0 10px; }
-        .schedule-table th { background: #3d3d5c; padding: 12px; text-align: left; }
-        .schedule-table td { background: #2a2a3e; padding: 12px; vertical-align: middle; }
-        .schedule-table tr td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
-        .schedule-table tr td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-        .anime-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; }
         .day-header { background: #3d3d5c; padding: 15px; border-radius: 8px; margin: 25px 0 15px; }
+        .anime-item { background: #2a2a3e; border: 1px solid #3d3d5c; border-radius: 8px; margin-bottom: 10px; padding: 12px; }
+        .anime-cover { width: 80px; height: 110px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .anime-title { font-weight: bold; color: #fff; }
+        .anime-meta { color: #8b8bb3; font-size: 0.9em; }
+        .anime-time { color: #ffc107; }
     </style>
 </head>
 <body>
@@ -38,53 +37,23 @@
                         return;
                     }
 
-                    const dayNames = {
-                        'Monday': 'Lundi',
-                        'Tuesday': 'Mardi',
-                        'Wednesday': 'Mercredi',
-                        'Thursday': 'Jeudi',
-                        'Friday': 'Vendredi',
-                        'Saturday': 'Samedi',
-                        'Sunday': 'Dimanche'
-                    };
-
-                    const byDay = {};
-                    data.schedule.forEach(item => {
-                        const date = new Date(item.airing_at * 1000);
-                        const dayKey = date.toISOString().split('T')[0];
-                        if (!byDay[dayKey]) byDay[dayKey] = [];
-                        byDay[dayKey].push({...item, date});
-                    });
-
                     let html = '';
-                    const sortedDays = Object.keys(byDay).sort((a, b) => new Date(a) - new Date(b));
 
-                    sortedDays.forEach(dayKey => {
-                        const items = byDay[dayKey];
-                        const firstDate = items[0].date;
-                        const dayName = dayNames[firstDate.toLocaleDateString('en-US', {weekday: 'long'})] || firstDate.toLocaleDateString('fr-FR', {weekday: 'long'});
-                        const dayNum = firstDate.getDate();
-                        const monthName = firstDate.toLocaleDateString('fr-FR', {month: 'long'});
+                    data.schedule.forEach(dayBlock => {
+                        html += `<div class="day-header"><h5 class="mb-0">${dayBlock.day_name} ${dayBlock.day_num} ${dayBlock.month}</h5></div>`;
                         
-                        html += `<div class="day-header"><h5 class="mb-0">${dayName} ${dayNum} ${monthName}</h5></div>`;
-                        
-                        html += '<table class="table schedule-table">';
-                        html += '<thead><tr><th style="width:100px">Image</th><th>Titre</th><th style="width:100px">Épisode</th><th style="width:120px">Heure</th></tr></thead>';
-                        html += '<tbody>';
-                        
-                        items.forEach(item => {
-                            const time = item.date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+                        dayBlock.animes.forEach(item => {
                             html += `
-                                <tr>
-                                    <td><img src="${item.cover || ''}" class="anime-cover" onerror="this.style.display='none'" /></td>
-                                    <td class="text-light fw-bold">${item.title}</td>
-                                    <td class="text-info">#${item.episode}</td>
-                                    <td class="text-warning">${time}</td>
-                                </tr>
+                                <div class="anime-item d-flex align-items-center">
+                                    <img src="${item.cover || ''}" class="anime-cover me-3" onerror="this.style.display='none'" />
+                                    <div>
+                                        <div class="anime-title">${item.title}</div>
+                                        <div class="anime-meta">Épisode ${item.episode} - ${dayBlock.day_name}</div>
+                                    </div>
+                                    <div class="ms-auto anime-time">${item.airing_time}</div>
+                                </div>
                             `;
                         });
-                        
-                        html += '</tbody></table>';
                     });
 
                     container.innerHTML = html;

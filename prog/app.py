@@ -661,8 +661,15 @@ def downloads_dashboard():
         path = os.path.join(anime_dir, nom_dossier)
         
         existing_eps = set()
+        local_cover = None
         if os.path.exists(path):
             existing_eps = {int(f.replace(".mp4", "")) for f in os.listdir(path) if f.endswith(".mp4")}
+            cover_jpg = os.path.join(path, "cover.jpg")
+            cover_png = os.path.join(path, "cover.png")
+            if os.path.exists(cover_jpg):
+                local_cover = f"/api/cleanup/cover?path={nom_dossier}"
+            elif os.path.exists(cover_png):
+                local_cover = f"/api/cleanup/cover?path={nom_dossier}"
         
         available_eps = []
         for ep in range(1, sortie + 1):
@@ -677,7 +684,8 @@ def downloads_dashboard():
                 "nom_dossier": nom_dossier,
                 "nom_complet": anime["nom_complet"],
                 "episodes": sorted(available_eps),
-                "img": anime["img"]
+                "img": anime["img"],
+                "local_cover": local_cover
             }
     
     return jsonify({
