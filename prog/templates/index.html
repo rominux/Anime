@@ -326,14 +326,7 @@
 
         <div class="container mt-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="m-0">
-                    {% if view_mode == 'planning' %}&#128197; Planning{% elif view_mode == 'suggestions' %}&#128161; Suggestions{% else %}&#128250; Watching{% endif %}
-                </h2>
-                <ul class="nav nav-pills nav-{{ view_mode }}">
-                    <li class="nav-item"><a class="nav-link {% if view_mode == 'watching' %}active{% endif %}" href="/en">Watching</a></li>
-                    <li class="nav-item"><a class="nav-link {% if view_mode == 'planning' %}active{% endif %}" href="/en/planning">Planning</a></li>
-                    <li class="nav-item"><a class="nav-link {% if view_mode == 'suggestions' %}active{% endif %}" href="/en/suggestions">Suggestions</a></li>
-                </ul>
+                <h2 class="m-0">&#128250; Watching</h2>
                 <a href="/refresh" class="btn btn-outline-light btn-sm" id="refreshBtn">&#128260; Refresh</a>
                 <a href="/" class="btn btn-outline-light btn-sm">⬅️ Retour Portail</a>
             </div>

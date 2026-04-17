@@ -55,7 +55,7 @@ def sync_anilist_to_db():
                     anime.status = status
                     
                     nom_dossier = anime_data.get('nom_dossier')
-                    if nom_dossier:
+                    if status == "CURRENT" and nom_dossier:
                         anime_dir = os.path.join(get_anime_dir(), nom_dossier)
                         if os.path.exists(anime_dir):
                             cover_jpg = os.path.join(anime_dir, "cover.jpg")
@@ -64,8 +64,10 @@ def sync_anilist_to_db():
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
                             elif os.path.exists(cover_png):
                                 anime.cover_local = f"/api/cleanup/cover?path={nom_dossier}"
-                    db.session.commit()
-                    logic.cache_cover(anime_data)
+                        db.session.commit()
+                        logic.cache_cover(anime_data)
+                    else:
+                        db.session.commit()
         anime_sync_success = True
         logger.info("[SYNC] Anime sync completed")
     except requests.exceptions.ConnectionError as e:
@@ -115,18 +117,6 @@ def index_en():
     return render_template("index.html", animes=animes, view_mode="watching")
 
 
-@app.route("/en/planning")
-def planning_en():
-    animes = get_animes_from_db("PLANNING")
-    return render_template("index.html", animes=animes, view_mode="planning")
-
-
-@app.route("/en/suggestions")
-def suggestions_en():
-    animes = get_animes_from_db("COMPLETED")
-    return render_template("index.html", animes=animes, view_mode="suggestions")
-
-
 @app.route("/fr")
 def index_fr():
     animes = get_animes_from_db("CURRENT")
@@ -165,7 +155,11 @@ def anilist_completed():
 
 @app.route("/anilist/season")
 def anilist_season():
-    animes = get_animes_from_db("COMPLETED")
+    try:
+        animes = logic.get_seasonal_suggestions()
+    except Exception as e:
+        logger.error(f"Failed to fetch seasonal suggestions: {e}")
+        animes = []
     return render_template("anilist_index.html", animes=animes, view_mode="season")
 
 

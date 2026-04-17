@@ -104,40 +104,77 @@
         function renderFolders(data) {
             const results = document.getElementById('scan-results');
             
-            const hasContent = (data.empty && data.empty.length > 0) || 
-                              (data.empty_on_list && data.empty_on_list.length > 0) ||
-                              (data.orphaned && data.orphaned.length > 0);
+            const allItems = [
+                ...(data.empty || []),
+                ...(data.empty_on_list || []),
+                ...(data.orphaned || [])
+            ];
             
-            if (!hasContent) {
+            if (allItems.length === 0) {
                 results.innerHTML = '<div class="text-success">Aucun dossier à nettoyer!</div>';
                 return;
             }
-
+            
+            const groups = {};
+            const groupOrder = ['Watching', 'Planning', 'Completed', 'Orphelin', 'Autre'];
+            
+            allItems.forEach(f => {
+                const status = f.status || 'Autre';
+                if (!groups[status]) groups[status] = [];
+                groups[status].push(f);
+            });
+            
             let html = '';
-
-            if (data.empty_on_list && data.empty_on_list.length > 0) {
-                html += '<h5 class="text-secondary mt-4">Dossiers vides (encore dans vos listes)</h5>';
-                data.empty_on_list.forEach(f => {
+            
+            groupOrder.forEach(status => {
+                if (!groups[status] || groups[status].length === 0) return;
+                
+                const statusClass = {
+                    'Watching': 'text-primary',
+                    'Planning': 'text-purple',
+                    'Completed': 'text-success',
+                    'Orphelin': 'text-warning',
+                    'Autre': 'text-secondary'
+                };
+                
+                const statusBg = {
+                    'Watching': '#0d6efd',
+                    'Planning': '#6f42c1',
+                    'Completed': '#198754',
+                    'Orphelin': '#ffc107',
+                    'Autre': '#6c757d'
+                };
+                
+                html += `
+                    <div class="group-section mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
+                            <h5 class="m-0 ${statusClass[status]}" style="color: ${statusBg[status]} !important;">
+                                ${status === 'Orphelin' ? '🔴 Orphelins' : (status === 'Completed' ? '🟢 Terminés' : (status === 'Planning' ? '🟣 À Venir' : (status === 'Watching' ? '🔵 En Cours' : '⚪ Inconnu')))}
+                            </h5>
+                            <label class="d-flex align-items-center gap-2 cursor-pointer">
+                                <input type="checkbox" class="select-all-group" data-group="${status}" onchange="toggleGroup('${status}', this.checked)" />
+                                <span class="small">Tout sélectionner</span>
+                            </label>
+                        </div>
+                        <div class="group-items" data-group="${status}">
+                `;
+                
+                groups[status].forEach(f => {
                     html += renderFolderCard(f);
                 });
-            }
-
-            if (data.empty && data.empty.length > 0) {
-                html += '<h5 class="text-danger mt-4">Dossiers vides</h5>';
-                data.empty.forEach(f => {
-                    html += renderFolderCard(f);
-                });
-            }
-
-            if (data.orphaned && data.orphaned.length > 0) {
-                html += '<h5 class="text-warning mt-4">Dossiers orphelins (non dans vos listes)</h5>';
-                data.orphaned.forEach(f => {
-                    html += renderFolderCard(f);
-                });
-            }
-
+                
+                html += '</div></div>';
+            });
+            
             results.innerHTML = html;
             document.getElementById('delete-section').style.display = 'block';
+        }
+        
+        function toggleGroup(status, checked) {
+            const groupItems = document.querySelectorAll(`.group-items[data-group="${status}"] input[type="checkbox"]`);
+            groupItems.forEach(cb => {
+                cb.checked = checked;
+            });
         }
 
         function deleteSelected() {

@@ -191,6 +191,7 @@ class DownloadManager:
             return len(self._active_downloads) > 0
 
     def get_status(self) -> Dict[str, Any]:
+        active_downloads_list = self.get_active_downloads()
         with self._state_lock:
             return {
                 "phase": self._phase.value,
@@ -205,7 +206,7 @@ class DownloadManager:
                 "search_queue_size": self._search_queue.qsize(),
                 "download_queue_size": self._download_queue.qsize(),
                 "finished_downloads": self._finished_downloads[-10:],
-                "active_downloads": self.get_active_downloads(),
+                "active_downloads": active_downloads_list,
             }
 
     def add_task(self, task: DownloadTask) -> bool:
@@ -286,10 +287,14 @@ class DownloadManager:
                 self._current_search = {"anime": task.anime_data, "episodes": task.episodes}
             self._notify_subscribers()
 
-            if task.source == DownloadSource.ENGLISH:
-                links = self._extract_links_en(task.anime_data, task.episodes)
-            else:
-                links = self._extract_links_fr(task.anime_data, task.episodes)
+            links = {}
+            try:
+                if task.source == DownloadSource.ENGLISH:
+                    links = self._extract_links_en(task.anime_data, task.episodes)
+                else:
+                    links = self._extract_links_fr(task.anime_data, task.episodes)
+            except Exception as e:
+                logger.error(f"Link extraction failed: {e}")
 
             if links:
                 self._download_queue.put(
@@ -316,32 +321,34 @@ class DownloadManager:
             except queue.Empty:
                 break
 
+            anime_name = job["anime"]["nom_complet"].split(" ;;; ")[0]
+            source = job.get("source", DownloadSource.ENGLISH)
+            nom_dossier = job["anime"]["nom_dossier"]
+
             with self._state_lock:
                 self._current_download = job
             self._notify_subscribers()
 
-            anime_name = job["anime"]["nom_complet"].split(" ;;; ")[0]
-            dest_dir = os.path.join(self._config.ANIME_DIR, job["anime"]["nom_dossier"])
+            dest_dir = os.path.join(self._config.ANIME_DIR, nom_dossier)
             os.makedirs(dest_dir, exist_ok=True)
 
             for ep_num, video_url in job["links"].items():
-                key = f"{job['anime']['nom_dossier']}_{ep_num}"
+                key = f"{nom_dossier}_{ep_num}"
                 try:
                     self._download_file(
                         video_url,
                         os.path.join(dest_dir, f"{ep_num}.mp4"),
                         anime_name,
                         ep_num,
-                        job.get("source", DownloadSource.ENGLISH),
+                        source,
                     )
                 except requests.exceptions.RequestException as e:
                     logger.error(f"Download failed for {anime_name} Ep {ep_num}: {e}")
-                finally:
-                    with self._state_lock:
-                        self._active_downloads.pop(key, None)
-                        self._notify_subscribers()
 
             with self._state_lock:
+                for ep_num in job["links"].keys():
+                    key = f"{nom_dossier}_{ep_num}"
+                    self._active_downloads.pop(key, None)
                 self._finished_downloads.append(anime_name)
                 self._current_download = None
             self._notify_subscribers()
@@ -374,6 +381,9 @@ class DownloadManager:
         source: DownloadSource,
     ):
         key = f"{os.path.basename(os.path.dirname(save_path))}_{episode}"
+        last_notify_time = time.time()
+        downloaded_size = 0
+        progress = 0.0
 
         try:
             response = requests.get(url, stream=True, timeout=30)
@@ -394,15 +404,19 @@ class DownloadManager:
                     if chunk:
                         size = f.write(chunk)
                         bar.update(size)
+                        downloaded_size += size
 
-                        with self._state_lock:
-                            if key in self._active_downloads:
-                                ad = self._active_downloads[key]
-                                ad.downloaded_size += size
-                                if total_size > 0:
-                                    ad.progress = (ad.downloaded_size / total_size) * 100
-
-                        self._notify_subscribers()
+                        if total_size > 0:
+                            progress = (downloaded_size / total_size) * 100
+                            current_time = time.time()
+                            if current_time - last_notify_time >= 0.5:
+                                with self._state_lock:
+                                    if key in self._active_downloads:
+                                        ad = self._active_downloads[key]
+                                        ad.downloaded_size = downloaded_size
+                                        ad.progress = progress
+                                self._notify_subscribers()
+                                last_notify_time = current_time
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Download error: {e}")
