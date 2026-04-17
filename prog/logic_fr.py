@@ -3,6 +3,12 @@ import logging
 import subprocess
 from typing import Dict, List
 
+try:
+    import requests_cache
+    requests_cache.install_cache('anime_scraper_cache', expire_after=3600)
+except ImportError:
+    pass
+
 from dotenv import load_dotenv
 from src.var import get_anime_dir
 

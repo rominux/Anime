@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Téléchargements & Calendrier</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
     <style>
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
         .nav-tabs .nav-link { color: #aaa; }
@@ -50,7 +50,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         function getEnglishTitle(nomComplet) {
             if (!nomComplet) return '';
@@ -109,7 +109,7 @@
                     if (data.available && data.available.length > 0) {
                         availDiv.innerHTML = data.available.map(a => `
                             <div class="folder-item d-flex align-items-center">
-                                <img src="${a.local_cover || a.img || ''}" class="folder-cover me-3" onerror="this.src='${a.img || ''}'" />
+                                <img src="${a.local_cover || a.img || ''}" class="folder-cover me-3" loading="lazy" onerror="this.src='${a.img || ''}'" />
                                 <div class="flex-grow-1">
                                     <div class="folder-name">${getEnglishTitle(a.nom_complet)}</div>
                                     <div class="folder-meta">Épisodes: ${formatEpisodeRange(a.episodes)}</div>
@@ -136,7 +136,7 @@
                         dayBlock.animes.forEach(item => {
                             html += `
                                 <div class="folder-item d-flex align-items-center">
-                                    <img src="${item.cover || ''}" class="folder-cover me-3" onerror="this.style.display='none'" />
+                                    <img src="${item.cover || ''}" class="folder-cover me-3" loading="lazy" onerror="this.style.display='none'" />
                                     <div class="flex-grow-1">
                                         <div class="folder-name">${item.title}</div>
                                         <div class="folder-meta">Épisode ${item.episode} - ${dayBlock.day_name}</div>

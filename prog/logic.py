@@ -12,6 +12,12 @@ import subprocess
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 
+try:
+    import requests_cache
+    requests_cache.install_cache('anime_scraper_cache', expire_after=3600)
+except ImportError:
+    pass
+
 from dotenv import load_dotenv
 from src.var import get_anime_dir, get_anilist_token
 
@@ -552,10 +558,11 @@ def cache_cover(anime_data):
     anime_dir = os.path.join(ANIME_DIR, nom_dossier)
     os.makedirs(anime_dir, exist_ok=True)
     
+    cover_path_webp = os.path.join(anime_dir, "cover.webp")
     cover_path_jpg = os.path.join(anime_dir, "cover.jpg")
     cover_path_png = os.path.join(anime_dir, "cover.png")
     
-    if os.path.exists(cover_path_jpg) or os.path.exists(cover_path_png):
+    if os.path.exists(cover_path_webp) or os.path.exists(cover_path_jpg) or os.path.exists(cover_path_png):
         return True
     
     img_url = anime_data.get("img")
@@ -566,16 +573,13 @@ def cache_cover(anime_data):
         resp = requests.get(img_url, timeout=15, stream=True)
         resp.raise_for_status()
         
-        content_type = resp.headers.get("Content-Type", "")
-        if "png" in content_type.lower():
-            target_path = cover_path_png
-        else:
-            target_path = cover_path_jpg
+        from io import BytesIO
+        from PIL import Image
         
-        with open(target_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
+        img = Image.open(BytesIO(resp.content))
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        img.save(cover_path_webp, 'WEBP', quality=80)
         
         logger.info(f"[CACHE] Downloaded cover for {nom_dossier}")
         return True

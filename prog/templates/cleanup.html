@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Nettoyage Stockage</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
     <style>
         body { background-color: #1e1e2e; color: #fff; padding: 20px; }
         .folder-item { background: #2a2a3e; border: 1px solid #3d3d5c; border-radius: 8px; margin-bottom: 10px; padding: 12px; }
@@ -30,6 +30,7 @@
         
         <div class="mb-4">
             <button class="btn btn-primary" onclick="scanFolders()">🔍 Scanner le dossier Anime</button>
+            <button class="btn btn-warning" onclick="clearScraperCache()">🗑️ Vider le cache réseau (Scraping)</button>
         </div>
 
         <div id="scan-results">
@@ -41,7 +42,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         function scanFolders() {
             const results = document.getElementById('scan-results');
@@ -80,7 +81,7 @@
         }
 
         function renderFolderCard(f) {
-            const coverImg = f.cover ? `<img src="/api/cleanup/cover?path=${encodeURIComponent(f.name)}" class="folder-cover me-3" onerror="this.style.display='none'" />` : '';
+            const coverImg = f.cover ? `<img src="/api/cleanup/cover?path=${encodeURIComponent(f.name)}" class="folder-cover me-3" loading="lazy" onerror="this.style.display='none'" />` : '';
             const typeClass = f.type === 'empty' ? 'empty-folder' : (f.type === 'empty_on_list' ? 'empty-on-list' : 'orphaned-folder');
             const typeLabel = getFolderTypeLabel(f.type, f.status);
             
@@ -203,6 +204,21 @@
             .catch(e => {
                 showToast('Erreur', 'Erreur lors de la suppression', 'error');
             });
+        }
+
+        function clearScraperCache() {
+            fetch('/api/cleanup/clear_cache', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Succès', 'Cache réseau vidé', 'success');
+                    } else {
+                        showToast('Erreur', data.error || 'Erreur inconnue', 'error');
+                    }
+                })
+                .catch(e => {
+                    showToast('Erreur', 'Erreur de connexion', 'error');
+                });
         }
     </script>
 </body>

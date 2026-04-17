@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anime Manager - FR (Anime-Sama)</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
     <style>
         :root {
             --bg-primary: #1e1e2e;
@@ -205,7 +205,7 @@
             {% for anime in animes %}
             <div class="col-6 col-md-4 col-lg-3 col-xl-2">
                 <div class="card anime-card h-100" data-dossier="{{ anime.nom_dossier }}" data-nom="{{ anime.nom_complet }}" onclick="openAnilistCard(this.getAttribute('data-dossier'), this.getAttribute('data-nom'))">
-                    <img src="{{ anime.img }}" class="card-img-top anime-img" alt="Cover">
+                    <img src="{{ anime.img }}" class="card-img-top anime-img" alt="Cover" loading="lazy">
                     <div class="card-body p-2">
                         <h6 class="card-title text-truncate m-0" style="font-size: 0.95rem;">{{ anime.nom_complet.split(' ;;; ')[0] }}</h6>
                         <small class="text-secondary">{{ anime.progress }} / {{ anime.sortie }}</small>
@@ -242,7 +242,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script>
         let currentAnimeTitle = "";
         let currentNomDossierFR = "";

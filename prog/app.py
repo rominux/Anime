@@ -76,14 +76,17 @@ def sync_anilist_to_db():
         logger.error(f"[SYNC] Failed to sync animes: {e}")
     
     try:
-        logger.info("[SYNC] Fetching airing schedule...")
-        schedule_data = logic.get_airing_schedule()
-        logger.info(f"[SYNC] Fetched {len(schedule_data) if schedule_data else 0} days of schedule from AniList")
-        if schedule_data:
-            ScheduleCache.save_schedule(schedule_data)
-            logger.info("[SYNC] Airing schedule cached successfully.")
+        if ScheduleCache.is_cache_fresh():
+            logger.info("[SYNC] Schedule cache is fresh (<12h), skipping fetch")
         else:
-            logger.warning("[SYNC] No schedule data returned from AniList")
+            logger.info("[SYNC] Fetching airing schedule...")
+            schedule_data = logic.get_airing_schedule()
+            logger.info(f"[SYNC] Fetched {len(schedule_data) if schedule_data else 0} days of schedule from AniList")
+            if schedule_data:
+                ScheduleCache.save_schedule(schedule_data)
+                logger.info("[SYNC] Airing schedule cached successfully.")
+            else:
+                logger.warning("[SYNC] No schedule data returned from AniList")
     except Exception as e:
         logger.error(f"[SYNC] Failed to cache schedule: {e}")
     
@@ -612,10 +615,13 @@ def cleanup_cover():
     anime_dir = get_anime_dir()
     folder_path = os.path.join(anime_dir, folder_name)
     
+    cover_webp = os.path.join(folder_path, "cover.webp")
     cover_jpg = os.path.join(folder_path, "cover.jpg")
     cover_png = os.path.join(folder_path, "cover.png")
     
-    if os.path.exists(cover_jpg):
+    if os.path.exists(cover_webp):
+        return send_file(cover_webp, mimetype='image/webp')
+    elif os.path.exists(cover_jpg):
         return send_file(cover_jpg)
     elif os.path.exists(cover_png):
         return send_file(cover_png)
@@ -625,6 +631,20 @@ def cleanup_cover():
         return redirect(anime.cover_image)
     
     return "", 404
+
+
+@app.route("/api/cleanup/clear_cache", methods=["POST"])
+def clear_scraper_cache():
+    try:
+        import requests_cache
+        requests_cache.clear()
+        logger.info("[CACHE] Scraper cache cleared")
+        return jsonify({"success": True, "message": "Cache réseau vidé"})
+    except ImportError:
+        return jsonify({"success": False, "error": "requests-cache non installé"})
+    except Exception as e:
+        logger.error(f"[CACHE] Failed to clear cache: {e}")
+        return jsonify({"success": False, "error": str(e)})
 
 
 @app.errorhandler(404)

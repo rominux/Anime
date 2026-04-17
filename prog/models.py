@@ -120,6 +120,14 @@ class ScheduleCache(db.Model):
         return []
     
     @staticmethod
+    def is_cache_fresh():
+        cache = ScheduleCache.query.first()
+        if cache and cache.updated_at:
+            age = datetime.utcnow() - cache.updated_at
+            return age.total_seconds() < 43200
+        return False
+    
+    @staticmethod
     def save_schedule(schedule_data):
         try:
             cache = ScheduleCache.query.first()
