@@ -510,7 +510,7 @@
                 if (!video.paused) {
                     document.getElementById('videoControls').classList.remove('show');
                 }
-            }, 3000);
+            }, 5000);
         }
 
         video.addEventListener('play', updatePlayButton);
@@ -669,22 +669,21 @@
         playNextOverlay.id = 'playNextOverlay';
         playNextOverlay.style.cssText = `
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.85);
-            padding: 30px 50px;
-            border-radius: 15px;
+            bottom: 80px;
+            right: 30px;
+            background: rgba(0,0,0,0.9);
+            padding: 20px 30px;
+            border-radius: 10px;
             text-align: center;
             display: none;
             z-index: 1000;
             border: 2px solid #ffc107;
-            box-shadow: 0 0 30px rgba(255,193,7,0.3);
+            box-shadow: 0 0 20px rgba(255,193,7,0.3);
         `;
         playNextOverlay.innerHTML = `
-            <div style="color: #ffc107; font-size: 2rem; margin-bottom: 15px;">⏭️</div>
-            <div style="color: white; font-size: 1.2rem; margin-bottom: 20px;">Épisode suivant disponible</div>
-            <button onclick="nextEpisode()" class="btn btn-warning btn-lg">Lire l'épisode ${NEXT_EP}</button>
+            <div style="color: #ffc107; font-size: 1.5rem; margin-bottom: 10px;">⏭️ Episode suivant</div>
+            <div style="color: white; font-size: 1rem; margin-bottom: 15px;">Épisode ${NEXT_EP} disponible</div>
+            <button onclick="nextEpisode()" class="btn btn-warning btn-sm">Lire maintenant</button>
         `;
         document.querySelector('.video-container').appendChild(playNextOverlay);
 

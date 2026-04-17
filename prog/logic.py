@@ -646,6 +646,7 @@ def get_airing_schedule(username="Pate0Sucre"):
     
     try:
         lists = data.get("data", {}).get("MediaListCollection", {}).get("lists", [])
+        logger.info(f"[SCHEDULE] AniList returned {len(lists)} lists")
         for liste in lists:
             for entry in liste["entries"]:
                 media = entry["media"]

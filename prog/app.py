@@ -76,9 +76,12 @@ def sync_anilist_to_db():
     try:
         logger.info("[SYNC] Fetching airing schedule...")
         schedule_data = logic.get_airing_schedule()
+        logger.info(f"[SYNC] Fetched {len(schedule_data) if schedule_data else 0} days of schedule from AniList")
         if schedule_data:
             ScheduleCache.save_schedule(schedule_data)
             logger.info("[SYNC] Airing schedule cached successfully.")
+        else:
+            logger.warning("[SYNC] No schedule data returned from AniList")
     except Exception as e:
         logger.error(f"[SYNC] Failed to cache schedule: {e}")
     
@@ -653,6 +656,18 @@ if __name__ == "__main__":
         if Anime.query.count() == 0:
             logger.info("Database empty, running initial sync...")
             sync_anilist_to_db()
+        else:
+            logger.info("Database already populated, running schedule sync...")
+            try:
+                schedule_data = logic.get_airing_schedule()
+                if schedule_data:
+                    logger.info(f"[STARTUP] Fetched {len(schedule_data)} days of schedule from AniList")
+                    ScheduleCache.save_schedule(schedule_data)
+                    logger.info("[STARTUP] Schedule cached successfully")
+                else:
+                    logger.warning("[STARTUP] No schedule data returned from AniList")
+            except Exception as e:
+                logger.error(f"[STARTUP] Failed to cache schedule on startup: {e}")
     
     app.run(
         debug=get_flask_debug(),
