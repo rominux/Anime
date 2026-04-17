@@ -330,10 +330,16 @@
                 <a href="/refresh" class="btn btn-outline-light btn-sm" id="refreshBtn">&#128260; Refresh</a>
                 <a href="/" class="btn btn-outline-light btn-sm">⬅️ Retour Portail</a>
             </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="filterDownloaded" onchange="toggleDownloadedFilter()">
+                <label class="form-check-label text-light" for="filterDownloaded">Afficher uniquement les animes avec épisodes téléchargés</label>
+            </div>
+
             <div class="row g-4">
                 {% for anime in animes %}
                 <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                    <div class="card anime-card h-100" onclick="openAnime('{{ anime.nom_dossier }}', {{ anime.progress }})">
+                    <div class="card anime-card h-100" data-has-downloads="{{ 'true' if anime.has_downloads else 'false' }}" onclick="openAnime('{{ anime.nom_dossier }}', {{ anime.progress }})">
                         <img src="{{ anime.img }}" class="card-img-top anime-img" alt="Cover" loading="lazy" />
                         <div class="card-body p-2">
                             <h6 class="card-title text-truncate">{{ anime.nom_complet.split(' ;;; ')[0] }}</h6>
@@ -377,6 +383,19 @@
         <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
         <script>
             const VIEW_MODE = "{{ view_mode }}";
+
+            function toggleDownloadedFilter() {
+                const filterOn = document.getElementById('filterDownloaded').checked;
+                const cards = document.querySelectorAll('.anime-card');
+                cards.forEach(card => {
+                    const hasDownloads = card.getAttribute('data-has-downloads') === 'true';
+                    if (filterOn && !hasDownloads) {
+                        card.closest('.col-6').style.display = 'none';
+                    } else {
+                        card.closest('.col-6').style.display = '';
+                    }
+                });
+            }
         </script>
         <script>
             let currentAnime = {};

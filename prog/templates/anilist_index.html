@@ -31,6 +31,13 @@
             <li class="nav-item ms-auto"><a class="nav-link {% if view_mode == 'search' %}active{% endif %}" href="/anilist/search">🔍 Recherche Globale</a></li>
         </ul>
 
+        {% if view_mode != 'search' %}
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="filterDownloaded" onchange="toggleDownloadedFilter()">
+            <label class="form-check-label text-light" for="filterDownloaded">Afficher uniquement les animes avec épisodes téléchargés</label>
+        </div>
+        {% endif %}
+
         {% if view_mode == 'search' %}
         <div class="input-group mb-5">
             <input type="text" id="searchInput" class="form-control bg-dark text-white border-secondary" placeholder="Titre de l'anime (ex: Jujutsu Kaisen)..." onkeypress="if(event.key === 'Enter') searchAnilist()">
@@ -41,7 +48,7 @@
         <div class="row g-4" id="resultsGrid">
             {% for anime in animes %}
             <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                <div class="card anime-card h-100" data-id="{{ anime.id }}" data-title="{{ anime.nom_complet.split(' ;;; ')[0] }}" onclick="openStatusModal(this.getAttribute('data-id'), this.getAttribute('data-title'))">
+                <div class="card anime-card h-100" data-id="{{ anime.id }}" data-title="{{ anime.nom_complet.split(' ;;; ')[0] }}" data-has-downloads="{{ 'true' if anime.has_downloads else 'false' }}" onclick="openStatusModal(this.getAttribute('data-id'), this.getAttribute('data-title'))">
                     <img src="{{ anime.img }}" class="card-img-top anime-img" alt="Cover" loading="lazy">
                     <div class="card-body p-2 text-center d-flex flex-column justify-content-center">
                         <h6 class="card-title text-truncate m-0" style="font-size: 0.9rem;">{{ anime.nom_complet.split(' ;;; ')[0] }}</h6>
@@ -82,6 +89,19 @@
     <script>
         let currentMediaId = null;
         const modal = new bootstrap.Modal(document.getElementById("statusModal"));
+
+        function toggleDownloadedFilter() {
+            const filterOn = document.getElementById('filterDownloaded').checked;
+            const cards = document.querySelectorAll('.anime-card');
+            cards.forEach(card => {
+                const hasDownloads = card.getAttribute('data-has-downloads') === 'true';
+                if (filterOn && !hasDownloads) {
+                    card.closest('.col-6').style.display = 'none';
+                } else {
+                    card.closest('.col-6').style.display = '';
+                }
+            });
+        }
 
         function searchAnilist() {
             const query = document.getElementById('searchInput').value;

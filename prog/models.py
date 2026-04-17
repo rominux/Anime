@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
+from src.var import get_anime_dir
+
 db = SQLAlchemy()
 
 class Anime(db.Model):
@@ -30,6 +32,15 @@ class Anime(db.Model):
             return f"{self.title_romaji} ;;; {self.title_english}"
         return self.title_romaji or "Unknown"
     
+    @property
+    def has_downloads(self):
+        if not self.nom_dossier:
+            return False
+        anime_dir = os.path.join(get_anime_dir(), self.nom_dossier)
+        if not os.path.exists(anime_dir):
+            return False
+        return any(f.endswith(('.mp4', '.mkv')) for f in os.listdir(anime_dir))
+    
     def to_dict(self):
         return {
             'id': self.anilist_id,
@@ -44,7 +55,8 @@ class Anime(db.Model):
             'total': self.total_episodes,
             'lien': self.lien,
             'img': self.cover_local or self.cover_image,
-            'status': self.status
+            'status': self.status,
+            'has_downloads': self.has_downloads
         }
     
     @staticmethod

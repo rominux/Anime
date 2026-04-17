@@ -285,13 +285,27 @@
 
         .ep-btn:hover { background: #4a4a5e; }
         .ep-btn.current {
-            border-color: var(--accent-blue);
+            border-color: #fff !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(13, 110, 253, 0.8);
+            font-size: 1.1rem;
+            font-weight: bold;
             background: var(--accent-blue);
         }
         .ep-btn.watched { background: var(--accent-red); }
         .ep-btn.downloaded { background: var(--accent-green); }
-        .ep-btn.watched.current { background: var(--accent-red); border-color: #fff; }
-        .ep-btn.downloaded.current { background: var(--accent-green); border-color: #fff; }
+        .ep-btn.watched.current { 
+            background: var(--accent-red); 
+            border-color: #fff !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(220, 53, 69, 0.8);
+        }
+        .ep-btn.downloaded.current { 
+            background: var(--accent-green); 
+            border-color: #fff !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(25, 135, 84, 0.8);
+        }
 
         .action-btn {
             padding: 6px 12px;
@@ -373,9 +387,13 @@
                     <button class="control-btn" onclick="togglePlay()" id="playBtn">&#9658;</button>
                     <button class="control-btn" onclick="skip(-10)">&#8722;10s</button>
                     <button class="control-btn" onclick="skip(10)">+10s</button>
+                    <button class="control-btn" onclick="skip(80)">+80s</button>
                     <button class="control-btn" onclick="toggleMute()" id="muteBtn">&#9834;</button>
                     <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                     <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+                    {% if next_episode %}
+                    <button class="control-btn text-success" onclick="nextEpisode()" title="Episode suivant">&#9654; Ep {{ next_episode }}</button>
+                    {% endif %}
                 </div>
                 <div class="controls-center">
                 </div>
@@ -411,10 +429,6 @@
     </div>
 
     <div class="bottom-panel">
-        <div class="bottom-toolbar">
-            <button class="action-btn sync" onclick="syncProgress()">&#9737; Sync</button>
-            <button class="action-btn delete" onclick="deleteWatched()">&#128465; Supprimer vus</button>
-        </div>
         <div class="ep-list">
             <div class="ep-list-inner" id="epList"></div>
         </div>
@@ -504,54 +518,21 @@
         }
 
         function showControls() {
+            const container = document.querySelector('.video-container');
+            container.style.cursor = 'default';
             document.getElementById('videoControls').classList.add('show');
             clearTimeout(hideControlsTimeout);
             hideControlsTimeout = setTimeout(() => {
                 if (!video.paused) {
                     document.getElementById('videoControls').classList.remove('show');
+                    container.style.cursor = 'none';
                 }
-            }, 5000);
+            }, 3000);
         }
 
-        video.addEventListener('play', updatePlayButton);
-        video.addEventListener('pause', updatePlayButton);
-        video.addEventListener('ended', updatePlayButton);
-
-        video.addEventListener('timeupdate', () => {
-            if (video.duration) {
-                const percent = (video.currentTime / video.duration) * 100;
-                progressBar.style.width = percent + '%';
-            }
-            timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
-        });
-
-        video.addEventListener('progress', () => {
-            if (video.buffered.length > 0) {
-                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-                const percent = (bufferedEnd / video.duration) * 100;
-                progressBar.style.background = `linear-gradient(to right, var(--accent-blue) ${percent}%, rgba(255,255,255,0.3) ${percent}%)`;
-            }
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            video.currentTime = pos * video.duration;
-        });
-
-        volumeSlider.addEventListener('input', (e) => {
-            video.volume = e.target.value;
-            video.muted = e.target.value == 0;
-            muteBtn.innerHTML = video.muted ? '&#9833;' : '&#9834;';
-        });
-
-        video.addEventListener('click', () => {
-            togglePlay();
-            showControls();
-        });
-
-        document.addEventListener('mousemove', showControls);
-        document.addEventListener('touchstart', showControls);
+        const videoContainer = document.querySelector('.video-container');
+        videoContainer.addEventListener('mousemove', showControls);
+        videoContainer.addEventListener('touchstart', showControls);
 
         speedMenu.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -664,38 +645,6 @@
             loadEpisodeList();
             showToast('Succès', 'Épisodes supprimés', 'success');
         }
-
-        const playNextOverlay = document.createElement('div');
-        playNextOverlay.id = 'playNextOverlay';
-        playNextOverlay.style.cssText = `
-            position: absolute;
-            bottom: 80px;
-            right: 30px;
-            background: rgba(0,0,0,0.9);
-            padding: 20px 30px;
-            border-radius: 10px;
-            text-align: center;
-            display: none;
-            z-index: 1000;
-            border: 2px solid #ffc107;
-            box-shadow: 0 0 20px rgba(255,193,7,0.3);
-        `;
-        playNextOverlay.innerHTML = `
-            <div style="color: #ffc107; font-size: 1.5rem; margin-bottom: 10px;">⏭️ Episode suivant</div>
-            <div style="color: white; font-size: 1rem; margin-bottom: 15px;">Épisode ${NEXT_EP} disponible</div>
-            <button onclick="nextEpisode()" class="btn btn-warning btn-sm">Lire maintenant</button>
-        `;
-        document.querySelector('.video-container').appendChild(playNextOverlay);
-
-        video.addEventListener('ended', () => {
-            playNextOverlay.style.display = 'block';
-        });
-
-        video.addEventListener('timeupdate', () => {
-            if (video.duration && (video.duration - video.currentTime) <= 30 && NEXT_EP && playNextOverlay.style.display === 'none') {
-                playNextOverlay.style.display = 'block';
-            }
-        });
 
         video.addEventListener('waiting', () => {
             loadingOverlay.classList.add('show');
