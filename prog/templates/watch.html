@@ -99,12 +99,17 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.9));
             padding: 40px 20px 20px;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
         }
 
-        .video-container:hover .video-controls,
         .video-controls.show {
             opacity: 1;
+            pointer-events: auto;
+        }
+
+        .video-container.idle {
+            cursor: none;
         }
 
         .progress-bar-container {
@@ -519,20 +524,27 @@
 
         function showControls() {
             const container = document.querySelector('.video-container');
-            container.style.cursor = 'default';
+            container.classList.remove('idle');
             document.getElementById('videoControls').classList.add('show');
             clearTimeout(hideControlsTimeout);
             hideControlsTimeout = setTimeout(() => {
                 if (!video.paused) {
                     document.getElementById('videoControls').classList.remove('show');
-                    container.style.cursor = 'none';
+                    container.classList.add('idle');
                 }
-            }, 3000);
+            }, 5000);
         }
 
         const videoContainer = document.querySelector('.video-container');
         videoContainer.addEventListener('mousemove', showControls);
         videoContainer.addEventListener('touchstart', showControls);
+        videoContainer.addEventListener('mouseleave', () => {
+            clearTimeout(hideControlsTimeout);
+            if (!video.paused) {
+                document.getElementById('videoControls').classList.remove('show');
+                videoContainer.classList.add('idle');
+            }
+        });
 
         video.addEventListener('loadedmetadata', () => {
             timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
