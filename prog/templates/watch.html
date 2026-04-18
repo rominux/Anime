@@ -534,6 +534,47 @@
         videoContainer.addEventListener('mousemove', showControls);
         videoContainer.addEventListener('touchstart', showControls);
 
+        video.addEventListener('loadedmetadata', () => {
+            timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
+        });
+
+        video.addEventListener('timeupdate', () => {
+            if (video.duration) {
+                const percent = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = percent + '%';
+            }
+            timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration || 0)}`;
+        });
+
+        video.addEventListener('progress', () => {
+            if (video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                const percent = (bufferedEnd / video.duration) * 100;
+                progressBar.style.background = `linear-gradient(to right, var(--accent-blue) ${percent}%, rgba(255,255,255,0.3) ${percent}%)`;
+            }
+        });
+
+        video.addEventListener('play', updatePlayButton);
+        video.addEventListener('pause', updatePlayButton);
+        video.addEventListener('ended', updatePlayButton);
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = e.target.value == 0;
+            muteBtn.innerHTML = video.muted ? '&#9833;' : '&#9834;';
+        });
+
+        video.addEventListener('click', () => {
+            togglePlay();
+            showControls();
+        });
+
         speedMenu.addEventListener('click', (e) => {
             e.stopPropagation();
         });
