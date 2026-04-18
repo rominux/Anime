@@ -396,13 +396,13 @@
                     <button class="control-btn" onclick="toggleMute()" id="muteBtn">&#9834;</button>
                     <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                     <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
-                    {% if next_episode %}
-                    <button class="control-btn text-success" onclick="nextEpisode()" title="Episode suivant">&#9654; Ep {{ next_episode }}</button>
-                    {% endif %}
                 </div>
                 <div class="controls-center">
                 </div>
                 <div class="controls-right">
+                    {% if next_episode %}
+                    <button class="control-btn text-success" onclick="nextEpisode()" title="Episode suivant">&#9654; Ep {{ next_episode }}</button>
+                    {% endif %}
                     <div class="speed-control">
                         <button class="speed-btn" id="speedBtn" onclick="toggleSpeedMenu()">1x</button>
                         <div class="speed-menu" id="speedMenu">
