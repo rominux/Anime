@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Manager - Pro</title>
+    <style>
+        :root {
+            --bg-color: #1a1c2c;
+            --card-bg: #25283d;
+            --sidebar-bg: #1f2235;
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+            --accent: #4a90e2;
+            --day-label: #63b3ed;
+            --border-radius: 12px;
+
+            --modal-bg: #1f2235;
+            --btn-download: #2ecc71;
+            --btn-delete: #e74c3c;
+            --btn-play: #95a5a6;
+            --btn-sync: #3498db;
+            --btn-select-new: #f1c40f;
+
+            --ep-not-downloaded: #3b3f5c;
+            --ep-downloaded: #2ecc71;
+            --ep-not-released: #0d0e17;
+            --ep-watched: #e74c3c;
+            --ep-downloading: #ffc107;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background-color: var(--bg-color);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+
+        .dropdown-menu { background: var(--card-bg); color: white; border: 1px solid #444; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+
+        .header-btn { background: #3b3f5c; color: white; border: none; padding: 8px 15px; border-radius: 6px; margin-left: 8px; cursor: pointer; transition: 0.3s; }
+        .header-btn:hover { background: var(--accent); }
+        .header-btn.pull { background: #2ecc71; }
+        .header-btn.pull:hover { background: #27ae60; }
+        .header-btn.push { background: #3498db; }
+        .header-btn.push:hover { background: #2980b9; }
+        .header-btn.filter-btn.active { background: var(--accent); box-shadow: 0 0 0 2px rgba(74,144,226,0.4); }
+
+        .main-container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; }
+
+        aside { width: 400px; background: var(--sidebar-bg); border-radius: var(--border-radius); display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .sidebar-header { padding: 18px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; font-size: 1.1rem; }
+        .sidebar-content { padding: 15px; flex-grow: 1; overflow-y: auto; }
+
+        .day-group { margin-bottom: 30px; }
+        .day-title { font-size: 0.9rem; color: var(--day-label); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; border-left: 3px solid var(--accent); padding-left: 10px; }
+        .release-item { display: flex; align-items: center; gap: 14px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
+        .release-thumb { width: 50px; height: 70px; border-radius: 6px; object-fit: cover; }
+        .release-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .release-meta { font-size: 0.8rem; color: var(--text-dim); }
+
+        main { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px; padding-right: 10px; }
+
+        .anime-card { cursor: pointer; transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1); }
+        .anime-card:hover { transform: scale(1.08); z-index: 5; }
+
+        .cover-container { width: 100%; padding-top: 142%; position: relative; border-radius: var(--border-radius); overflow: hidden; }
+        .cover-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .card-info { margin-top: 12px; }
+        .anime-name { font-size: 0.95rem; font-weight: 600; }
+        .episode-count { font-size: 0.8rem; color: var(--accent); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none; justify-content: center; align-items: center; z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--modal-bg);
+            width: 900px;
+            max-height: 85vh;
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .close-btn { cursor: pointer; font-size: 28px; color: var(--text-dim); }
+        .close-btn:hover { color: white; }
+
+        .action-bar { display: flex; gap: 12px; margin-bottom: 25px; align-items: center; }
+        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; }
+
+        .btn-dl { background: var(--btn-download); }
+        .btn-del { background: var(--btn-delete); }
+        .btn-ply { background: var(--btn-play); }
+        .btn-snc { background: var(--btn-sync); }
+        .btn-new { background: var(--btn-select-new); color: #1a1c2c; }
+
+        .selection-count { min-width: 50px; padding: 0 15px; height: 45px; border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border-radius: 8px; }
+
+        .status-changer { display: flex; gap: 12px; margin-bottom: 25px; align-items: center; }
+        .status-select { background: var(--card-bg); color: white; border: 1px solid #444; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1; }
+        .btn-change-status { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
+        .episodes-scroll-area { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
+        .episodes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 12px; }
+        .ep-box { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .ep-box.selected { outline: 4px solid white; outline-offset: -4px; }
+
+        .ep-not-downloaded { background: #3b3f5c; }
+        .ep-downloaded { background: #2ecc71; }
+        .ep-not-released { background: #0d0e17; color: #333; cursor: not-allowed; }
+        .ep-watched { background: #e74c3c; }
+        .ep-downloading { background: #ffc107; color: black; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <select class="dropdown-menu" id="mode-selector">
+                <option value="watching">Watching</option>
+                <option value="planning">Planning</option>
+                <option value="suggestions">Suggestions</option>
+            </select>
+            <button class="header-btn filter-btn" id="filter-downloaded" onclick="toggleFilter('downloaded')">Telecharges</button>
+            <button class="header-btn filter-btn" id="filter-downloadable" onclick="toggleFilter('downloadable')">Telechargeable</button>
+        </div>
+        <div>
+            <button class="header-btn pull" onclick="pullAnilist()">Anilist Pull</button>
+            <button class="header-btn push" onclick="pushAnilist()">Anilist Push</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside>
+            <div class="sidebar-header">Planning Hebdo</div>
+            <div class="sidebar-content" id="calendar"></div>
+        </aside>
+        <main id="anime-grid"></main>
+    </div>
+
+    <div class="modal-overlay" id="anime-modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h1 id="modal-title" style="margin:0;"></h1>
+                <span class="close-btn" onclick="closeModal(null, true)">×</span>
+            </div>
+            <div id="modal-actions"></div>
+            <div class="episodes-scroll-area">
+                <div class="episodes-list" id="modal-episodes-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var modeSelector = document.getElementById('mode-selector');
+        var calendarDiv = document.getElementById('calendar');
+        var mainGrid = document.getElementById('anime-grid');
+        var modal = document.getElementById('anime-modal');
+
+        var selectedCount = 0;
+        var currentAnimeData = null;
+        var currentMode = 'watching';
+        var activeFilter = null;
+
+        modeSelector.addEventListener('change', function() {
+            currentMode = modeSelector.value;
+            activeFilter = null;
+            document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            loadAnimes();
+        });
+
+        function toggleFilter(filter) {
+            if (activeFilter === filter) {
+                activeFilter = null;
+                document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            } else {
+                activeFilter = filter;
+                document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+                document.getElementById('filter-' + filter).classList.add('active');
+            }
+            loadAnimes();
+        }
+
+        function loadSchedule() {
+            Promise.all([
+                fetch('/api/animes?status=CURRENT').then(function(r) { return r.json(); }),
+                fetch('/api/animes?status=PLANNING').then(function(r) { return r.json(); }),
+                fetch('/api/schedule').then(function(r) { return r.json(); })
+            ])
+            .then(function(results) {
+                var watching = results[0] || [];
+                var planning = results[1] || [];
+                var scheduleData = results[2];
+
+                var userIds = {};
+                watching.concat(planning).forEach(function(a) {
+                    if (a.id) userIds[a.id] = true;
+                });
+
+                if (scheduleData.success && scheduleData.schedule) {
+                    renderSchedule(scheduleData.schedule, userIds);
+                }
+            })
+            .catch(function(err) { console.error('Schedule error:', err); });
+        }
+
+        function renderSchedule(schedule, userIds) {
+            calendarDiv.innerHTML = '';
+            var hasAny = false;
+
+            schedule.forEach(function(dayData) {
+                var filteredAnimes = [];
+                if (dayData.animes) {
+                    dayData.animes.forEach(function(a) {
+                        if (a.id && userIds[a.id]) filteredAnimes.push(a);
+                    });
+                }
+                if (filteredAnimes.length === 0) return;
+
+                hasAny = true;
+                var today = new Date().toISOString().split('T')[0];
+                var isToday = dayData.date.startsWith(today);
+                var html = '<div class="day-group"><div class="day-title" style="' + (isToday ? 'color: #4a90e2;' : '') + '">' + dayData.day + ' ' + dayData.date + '</div>';
+
+                filteredAnimes.forEach(function(a) {
+                    html += '<div class="release-item">' +
+                        '<img class="release-thumb" src="' + (a.cover || '') + '" alt="' + a.title + '">' +
+                        '<div class="release-info">' +
+                            '<div class="release-title">' + a.title + '</div>' +
+                            '<div class="release-meta">Ep ' + a.episode + ' • ' + a.time + '</div>' +
+                        '</div>' +
+                    '</div>';
+                });
+
+                calendarDiv.innerHTML += html + '</div>';
+            });
+
+            if (!hasAny) {
+                calendarDiv.innerHTML = '<div style="text-align:center; color: var(--text-dim); margin-top:20px;">Aucun anime en diffusion cette semaine</div>';
+            }
+        }
+
+        function loadAnimes() {
+            var url;
+            if (currentMode === 'suggestions') {
+                url = '/api/animes_suggestions';
+            } else {
+                var status = currentMode === 'planning' ? 'PLANNING' : 'CURRENT';
+                url = '/api/animes?status=' + status;
+            }
+
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(animes) { renderAnimeGrid(animes); })
+                .catch(function(err) { console.error('Animes error:', err); });
+        }
+
+        function renderAnimeGrid(animes) {
+            mainGrid.innerHTML = '';
+
+            if (!animes || animes.length === 0) {
+                mainGrid.innerHTML = '<div style="text-align:center; color: var(--text-dim); margin-top: 40px; grid-column: 1/-1;"><h4>Aucun anime trouve dans cette liste.</h4></div>';
+                return;
+            }
+
+            if (activeFilter === 'downloaded') {
+                animes = animes.filter(function(a) { return a.has_downloads; });
+            } else if (activeFilter === 'downloadable') {
+                animes = animes.filter(function(a) { return a.can_download; });
+            }
+
+            if (animes.length === 0) {
+                mainGrid.innerHTML = '<div style="text-align:center; color: var(--text-dim); margin-top: 40px; grid-column: 1/-1;"><h4>Aucun anime ne correspond au filtre.</h4></div>';
+                return;
+            }
+
+            animes.forEach(function(anime) {
+                var card = document.createElement('article');
+                card.className = 'anime-card';
+                card.onclick = function() { openModal(anime); };
+                var titleParts = anime.nom_complet.split(' ;;; ');
+
+                card.innerHTML = '<div class="cover-container">' +
+                    '<img src="' + (anime.img || '') + '" alt="' + (titleParts[0] || '') + '">' +
+                    '</div>' +
+                    '<div class="card-info">' +
+                        '<div class="anime-name">' + (titleParts[0] || '') + '</div>' +
+                        '<div class="episode-count">' + (anime.progress || 0) + ' / ' + (anime.sortie || anime.total || '?') + '</div>' +
+                    '</div>';
+
+                mainGrid.appendChild(card);
+            });
+        }
+
+        function openModal(anime) {
+            currentAnimeData = anime;
+            var titleParts = anime.nom_complet.split(' ;;; ');
+            var titleHtml = titleParts[0] || '';
+            if (titleParts[1]) {
+                titleHtml += '<br><span style="font-size:0.8em; color: #a0a0a0;">' + titleParts[1] + '</span>';
+            }
+            document.getElementById('modal-title').innerHTML = titleHtml;
+            modal.style.display = 'flex';
+
+            var isWatching = anime.status === 'CURRENT';
+            if (isWatching) {
+                document.getElementById('modal-actions').innerHTML =
+                    '<div class="action-bar">' +
+                        '<button class="action-btn btn-dl" onclick="downloadSelected()">Download</button>' +
+                        '<button class="action-btn btn-del" onclick="deleteSelected()">Delete</button>' +
+                        '<button class="action-btn btn-ply" onclick="playEpisode()">Play</button>' +
+                        '<button class="action-btn btn-snc" onclick="syncProgress()">Sync</button>' +
+                        '<button class="action-btn btn-new" onclick="selectNewEpisodes()">Select New</button>' +
+                        '<div class="selection-count" id="count-display">0</div>' +
+                    '</div>';
+            } else {
+                var targetStatus = 'CURRENT';
+                var label = 'Ajouter à Watching';
+                if (!anime.status) {
+                    label = 'Ajouter à Watching';
+                }
+                document.getElementById('modal-actions').innerHTML =
+                    '<div class="status-changer">' +
+                        '<select class="status-select" id="status-select">' +
+                            '<option value="CURRENT">Watching</option>' +
+                            '<option value="PLANNING">Planning</option>' +
+                            '<option value="COMPLETED">Completed</option>' +
+                            '<option value="DROPPED">Dropped</option>' +
+                            '<option value="PAUSED">Paused</option>' +
+                        '</select>' +
+                        '<button class="btn-change-status" onclick="changeAnimeStatus()">Changer</button>' +
+                    '</div>';
+            }
+
+            var detailsUrl = '/api/details/' + anime.nom_dossier;
+            if (currentMode === 'suggestions') {
+                detailsUrl = '/api/details_suggestions/' + anime.nom_dossier;
+            }
+
+            fetch(detailsUrl)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.episodes) {
+                        renderEpisodes(data.episodes || [], data.progress || 0, data.total || 0);
+                    } else {
+                        document.getElementById('modal-episodes-grid').innerHTML = '<div style="text-align:center; color:var(--text-dim); grid-column:1/-1; padding:20px;">Ajoutez cet anime à votre liste pour voir les épisodes.</div>';
+                    }
+                })
+                .catch(function(err) { console.error('Details error:', err); });
+        }
+
+        function changeAnimeStatus() {
+            var select = document.getElementById('status-select');
+            var newStatus = select ? select.value : 'CURRENT';
+
+            fetch('/api/change_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nom_dossier: currentAnimeData.nom_dossier,
+                    status: newStatus
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    closeModal(null, true);
+                    if (newStatus === 'CURRENT') {
+                        currentMode = 'watching';
+                        modeSelector.value = 'watching';
+                    }
+                    loadAnimes();
+                    loadSchedule();
+                }
+            })
+            .catch(function(err) { console.error('Status change error:', err); });
+        }
+
+        function closeModal(e, force) {
+            if (force || e.target === modal) {
+                modal.style.display = 'none';
+                selectedCount = 0;
+            }
+        }
+
+        function renderEpisodes(episodes, progress, total) {
+            var grid = document.getElementById('modal-episodes-grid');
+            grid.innerHTML = '';
+
+            var maxEp = Math.max(total || 0, progress || 0, episodes ? episodes.length : 0);
+            if (maxEp === 0) {
+                grid.innerHTML = '<div style="text-align:center; color:var(--text-dim); grid-column:1/-1; padding:20px;">Aucun épisode disponible.</div>';
+                return;
+            }
+
+            for (var i = 1; i <= maxEp; i++) {
+                var epBox = document.createElement('div');
+                var statusClass = 'ep-not-downloaded';
+
+                var epData = episodes ? episodes.find(function(e) { return e.ep === i; }) : null;
+                if (epData) {
+                    if (epData.status === 'downloading') statusClass = 'ep-downloading';
+                    else if (epData.status === 'downloaded') statusClass = 'ep-downloaded';
+                    else if (epData.status === 'watched_kept') statusClass = 'ep-watched';
+                    else if (epData.status === 'unreleased') statusClass = 'ep-not-released';
+                    else statusClass = 'ep-not-downloaded';
+                } else if (i <= progress) {
+                    statusClass = 'ep-watched';
+                }
+
+                epBox.className = 'ep-box ' + statusClass;
+                epBox.innerText = i;
+
+                if (statusClass !== 'ep-not-released') {
+                    epBox.onclick = function() {
+                        this.classList.toggle('selected');
+                        selectedCount += this.classList.contains('selected') ? 1 : -1;
+                    };
+                }
+
+                grid.appendChild(epBox);
+            }
+        }
+
+        function selectNewEpisodes() {
+            document.querySelectorAll('.ep-box.ep-not-downloaded:not(.selected)').forEach(function(el) {
+                el.classList.add('selected');
+                selectedCount++;
+            });
+            var countEl = document.getElementById('count-display');
+            if (countEl) countEl.innerText = selectedCount;
+        }
+
+        function downloadSelected() {
+            if (!currentAnimeData || selectedCount === 0) return;
+            var selectedEps = [];
+            document.querySelectorAll('.ep-box.selected').forEach(function(box) {
+                selectedEps.push(parseInt(box.innerText));
+            });
+
+            fetch('/api/bulk_download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nom_dossier: currentAnimeData.nom_dossier, episodes: selectedEps })
+            })
+            .then(function() { closeModal(null, true); })
+            .catch(function(err) { alert('Erreur'); console.error(err); });
+        }
+
+        function deleteSelected() {
+            if (!currentAnimeData || selectedCount === 0) return;
+            if (!confirm('Supprimer les épisodes sélectionnés ?')) return;
+
+            var selectedEps = [];
+            document.querySelectorAll('.ep-box.selected').forEach(function(box) {
+                selectedEps.push(parseInt(box.innerText));
+            });
+
+            fetch('/api/bulk_delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nom_dossier: currentAnimeData.nom_dossier, episodes: selectedEps })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.status === 'deleted') openModal(currentAnimeData);
+            })
+            .catch(function(err) { alert('Erreur'); console.error(err); });
+        }
+
+        function playEpisode() {
+            if (!currentAnimeData) return;
+            var selectedBox = document.querySelector('.ep-box.selected');
+            if (!selectedBox) { alert('Sélectionnez un épisode'); return; }
+            var epNum = parseInt(selectedBox.innerText);
+            window.location.href = '/watch/' + currentAnimeData.nom_dossier + '/' + epNum;
+        }
+
+        function syncProgress() {
+            if (!currentAnimeData) return;
+            var selectedBox = document.querySelector('.ep-box.selected');
+            if (!selectedBox) return;
+            var epNum = parseInt(selectedBox.innerText);
+
+            fetch('/api/sync_anilist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nom_dossier: currentAnimeData.nom_dossier, episode: epNum })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) { if (data.success) alert('Sync local effectué'); })
+            .catch(function(err) { console.error(err); });
+        }
+
+        function pullAnilist() {
+            var btn = document.querySelector('.header-btn.pull');
+            btn.disabled = true;
+            btn.textContent = 'Pulling...';
+
+            fetch('/api/pull_anilist', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function() {
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Anilist Pull';
+                    loadAnimes();
+                    loadSchedule();
+                }, 3000);
+            })
+            .catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = 'Anilist Pull';
+                console.error(err);
+            });
+        }
+
+        function pushAnilist() {
+            var btn = document.querySelector('.header-btn.push');
+            btn.disabled = true;
+            btn.textContent = 'Pushing...';
+
+            fetch('/api/push_anilist', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function() {
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Anilist Push';
+                }, 2000);
+            })
+            .catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = 'Anilist Push';
+                console.error(err);
+            });
+        }
+
+        // Initialize
+        loadAnimes();
+        loadSchedule();
+    </script>
+</body>
+</html>
