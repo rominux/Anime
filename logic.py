@@ -65,22 +65,26 @@ def print_status(etape=""):
         name = CURRENT_SEARCH['anime']['nom_complet'].split(' ;;; ')[0] if CURRENT_SEARCH else ""
         rest = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in SEARCH_QUEUE]
         done = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
-        msg = f"🔍 {name}" if name else ""
-        if rest: msg += f" +{len(rest)} en file"
-        if done: msg += f" | ✓ {len(done)} trouves"
-        if etape: msg = f"{msg} — {etape}" if msg else etape
+        parts = []
+        if name: parts.append(name)
+        if rest: parts.append(f"+{len(rest)} en file")
+        if done: parts.append(f"trouves: {len(done)}")
+        msg = " | ".join(parts)
+        if etape: msg = f"{etape} [{msg}]" if msg else etape
         if msg: print(msg)
     elif PHASE == "DOWNLOAD":
         current = CURRENT_DOWNLOAD['anime']['nom_complet'].split(' ;;; ')[0] if CURRENT_DOWNLOAD else ""
         rest = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
-        msg = f"⬇ {current}" if current else ""
-        if rest: msg += f" +{len(rest)} en attente"
-        if FINISHED_DOWNLOADS: msg += f" | ✓ {len(FINISHED_DOWNLOADS)} termines"
-        if etape: msg = f"{msg} — {etape}" if msg else etape
+        parts = []
+        if current: parts.append(current)
+        if rest: parts.append(f"+{len(rest)} en attente")
+        if FINISHED_DOWNLOADS: parts.append(f"termines: {len(FINISHED_DOWNLOADS)}")
+        msg = " | ".join(parts) if parts else ""
+        if etape: msg = f"{etape} [{msg}]" if msg else etape
         if msg: print(msg)
     elif PHASE == "IDLE":
         if FINISHED_DOWNLOADS:
-            print(f"✓ Termines : {FINISHED_DOWNLOADS}")
+            print(f"Termines: {FINISHED_DOWNLOADS}")
         if etape:
             print(etape)
 
@@ -323,7 +327,7 @@ def get_anime_details(anime_data):
     progress = anime_data.get('progress', 0)
 
     if not os.path.exists(path):
-        return [{"ep": i, "status": "watched" if i <= progress else ("released" if i <= sortie else "unreleased")} for i in range(1, total + 1)]
+        return [{"ep": i, "status": "released" if i <= sortie else "unreleased"} for i in range(1, total + 1)]
 
     details = []
     for i in range(1, total + 1):
@@ -334,8 +338,6 @@ def get_anime_details(anime_data):
             status = "downloading"
         elif exists:
             status = "watched_kept" if i <= progress else "downloaded"
-        elif i <= progress:
-            status = "watched"
         else:
             status = "released" if i <= sortie else "unreleased"
         details.append({"ep": i, "status": status})

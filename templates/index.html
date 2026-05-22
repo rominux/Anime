@@ -441,7 +441,7 @@
                 if (epData) {
                     if (epData.status === 'downloading') statusClass = 'ep-downloading';
                     else if (epData.status === 'downloaded') statusClass = 'ep-downloaded';
-                    else if (epData.status === 'watched_kept' || epData.status === 'watched') statusClass = 'ep-watched';
+                    else if (epData.status === 'watched_kept') statusClass = 'ep-watched';
                     else if (epData.status === 'unreleased') statusClass = 'ep-not-released';
                     else statusClass = 'ep-not-downloaded';
                 } else if (i <= progress) {
