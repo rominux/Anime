@@ -238,14 +238,18 @@
         .controls-row .ctrl-btn:hover { background: var(--accent); }
 
         @media (max-width: 768px) {
-            header { flex-wrap: wrap; gap: 10px; }
-            .watch-layout { flex-direction: column; }
-            .episode-sidebar { width: 100%; flex-direction: row; gap: 10px; }
-            .cover-section { width: 100px; flex-shrink: 0; }
-            .episodes-section { flex: 1; overflow-x: auto; }
-            .episodes-grid { grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px; }
-            .ep-box { font-size: 0.7rem; }
-            .controls-row { flex-wrap: wrap; gap: 6px; }
+            body { padding: 8px; }
+            header { flex-wrap: wrap; gap: 8px; padding: 5px 0; }
+            header h2 { font-size: 1rem; }
+            .watch-layout { flex-direction: column; flex: 1; min-height: 0; }
+            .episode-sidebar { width: 100%; flex-direction: row; gap: 8px; flex-shrink: 0; }
+            .cover-section { width: 80px; flex-shrink: 0; }
+            .episodes-section { flex: 1; overflow-x: auto; min-height: 0; }
+            .episodes-grid { grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 4px; }
+            .ep-box { font-size: 0.65rem; border-width: 1px; }
+            .controls-row { flex-wrap: wrap; gap: 4px; }
+            .video-section { flex: 1; min-height: 0; }
+            #videoContainer { flex: 1; min-height: 0; }
         }
 
         ::-webkit-scrollbar { width: 6px; }

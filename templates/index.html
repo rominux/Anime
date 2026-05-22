@@ -48,7 +48,9 @@
             background-color: var(--bg-color);
             border-bottom: 1px solid rgba(255,255,255,0.1);
             z-index: 10;
+            gap: 10px;
         }
+        .header-row { display: flex; align-items: center; gap: 10px; }
 
         .dropdown-menu { background: var(--card-bg); color: white; border: 1px solid #444; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
 
@@ -68,8 +70,9 @@
 
         .day-group { margin-bottom: 30px; }
         .day-title { font-size: 0.9rem; color: var(--day-label); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; border-left: 3px solid var(--accent); padding-left: 10px; }
-        .release-item { display: flex; align-items: center; gap: 14px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
-        .release-thumb { width: 50px; height: 70px; border-radius: 6px; object-fit: cover; }
+        .release-item { display: flex; align-items: center; gap: 14px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; min-width: 0; }
+        .release-thumb { width: 50px; height: 70px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+        .release-info { min-width: 0; }
         .release-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .release-meta { font-size: 0.8rem; color: var(--text-dim); }
 
@@ -107,7 +110,7 @@
         .close-btn:hover { color: white; }
 
         .action-bar { display: flex; gap: 12px; margin-bottom: 25px; align-items: center; }
-        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; }
+        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; white-space: nowrap; }
 
         .btn-dl { background: var(--btn-download); }
         .btn-del { background: var(--btn-delete); }
@@ -115,7 +118,7 @@
         .btn-snc { background: var(--btn-sync); }
         .btn-new { background: var(--btn-select-new); color: #1a1c2c; }
 
-        .selection-count { min-width: 50px; padding: 0 15px; height: 45px; border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border-radius: 8px; }
+        .selection-count { min-width: 50px; padding: 0 15px; height: 45px; border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border-radius: 8px; flex-shrink: 0; }
 
         .status-changer { display: flex; gap: 12px; margin-bottom: 25px; align-items: center; }
         .status-select { background: var(--card-bg); color: white; border: 1px solid #444; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 1; }
@@ -139,7 +142,10 @@
         }
 
         @media (max-width: 768px) {
-            header { flex-wrap: wrap; gap: 10px; }
+            header { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 15px; }
+            .header-row { flex-wrap: wrap; }
+            .top-row { justify-content: center; }
+            .bottom-row { justify-content: center; }
             .main-container { flex-direction: column; padding: 10px; gap: 10px; }
             aside { width: 100%; max-height: 200px; }
             .sidebar-content { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding: 10px; }
@@ -155,7 +161,7 @@
 </head>
 <body>
     <header>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="header-row top-row">
             <select class="dropdown-menu" id="mode-selector">
                 <option value="watching">Watching</option>
                 <option value="planning">Planning</option>
@@ -164,7 +170,7 @@
             <button class="header-btn filter-btn" id="filter-downloaded" onclick="toggleFilter('downloaded')">Telecharges</button>
             <button class="header-btn filter-btn" id="filter-downloadable" onclick="toggleFilter('downloadable')">Telechargeable</button>
         </div>
-        <div>
+        <div class="header-row bottom-row">
             <button class="header-btn pull" onclick="pullAnilist()">Anilist Pull</button>
             <button class="header-btn push" onclick="pushAnilist()">Anilist Push</button>
         </div>
