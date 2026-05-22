@@ -494,9 +494,8 @@
                 var sc = 'ep-not-downloaded';
                 if (ep.status === 'downloading') sc = 'ep-downloading';
                 else if (ep.status === 'downloaded') sc = 'ep-downloaded';
-                else if (ep.status === 'watched_kept') sc = 'ep-watched';
+                else if (ep.status === 'watched_kept' || ep.status === 'watched') sc = 'ep-watched';
                 else if (ep.status === 'unreleased') sc = 'ep-not-released';
-                else if (ep.ep <= watchProgress) sc = 'ep-watched';
                 var box = document.createElement('a');
                 box.className = 'ep-box ' + sc;
                 if (ep.ep === current) box.classList.add('current');

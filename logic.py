@@ -62,25 +62,27 @@ WORKER_RUNNING = False
 
 def print_status(etape=""):
     if PHASE == "SEARCH":
-        search_names = []
-        if CURRENT_SEARCH: search_names.append(CURRENT_SEARCH['anime']['nom_complet'].split(' ;;; ')[0])
-        search_names += [a['anime']['nom_complet'].split(' ;;; ')[0] for a in SEARCH_QUEUE]
-        found_names = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
-        print(f"recherche de lien pour les anime : {search_names}")
-        print(f"lien trouver pour les anime : {found_names}\n")
-        if etape: print(etape)
+        name = CURRENT_SEARCH['anime']['nom_complet'].split(' ;;; ')[0] if CURRENT_SEARCH else ""
+        rest = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in SEARCH_QUEUE]
+        done = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
+        msg = f"🔍 {name}" if name else ""
+        if rest: msg += f" +{len(rest)} en file"
+        if done: msg += f" | ✓ {len(done)} trouves"
+        if etape: msg = f"{msg} — {etape}" if msg else etape
+        if msg: print(msg)
     elif PHASE == "DOWNLOAD":
-        dl_names = []
-        if CURRENT_DOWNLOAD: dl_names.append(CURRENT_DOWNLOAD['anime']['nom_complet'].split(' ;;; ')[0])
-        dl_names += [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
-        print("file de recherche terminer, debut des téléchargement:")
-        print(f"liste d'anime a télécharger: {dl_names}")
-        print(f"anime terminer: {FINISHED_DOWNLOADS}\n")
-        if etape: print(etape)
+        current = CURRENT_DOWNLOAD['anime']['nom_complet'].split(' ;;; ')[0] if CURRENT_DOWNLOAD else ""
+        rest = [a['anime']['nom_complet'].split(' ;;; ')[0] for a in DOWNLOAD_QUEUE]
+        msg = f"⬇ {current}" if current else ""
+        if rest: msg += f" +{len(rest)} en attente"
+        if FINISHED_DOWNLOADS: msg += f" | ✓ {len(FINISHED_DOWNLOADS)} termines"
+        if etape: msg = f"{msg} — {etape}" if msg else etape
+        if msg: print(msg)
     elif PHASE == "IDLE":
-        print("En attente de requêtes...")
-        if FINISHED_DOWNLOADS: print(f"Derniers terminés : {FINISHED_DOWNLOADS}")
-        if etape: print(f"\n{etape}")
+        if FINISHED_DOWNLOADS:
+            print(f"✓ Termines : {FINISHED_DOWNLOADS}")
+        if etape:
+            print(etape)
 
 def add_to_queue(anime_data, episodes):
     global WORKER_RUNNING
@@ -99,26 +101,25 @@ def queue_worker():
     while SEARCH_QUEUE or DOWNLOAD_QUEUE:
         if SEARCH_QUEUE:
             PHASE = "SEARCH"
-            while SEARCH_QUEUE:
-                CURRENT_SEARCH = SEARCH_QUEUE.pop(0)
-                print_status()
-                links = extract_links(CURRENT_SEARCH['anime'], CURRENT_SEARCH['episodes'])
-                if links:
-                    DOWNLOAD_QUEUE.append({"anime": CURRENT_SEARCH['anime'], "links": links})
-                else:
-                    for ep in CURRENT_SEARCH['episodes']:
-                        ACTIVE_DOWNLOADS.discard(f"{CURRENT_SEARCH['anime']['nom_dossier']}_{ep}")
-                CURRENT_SEARCH = None
-                print_status()
-        elif DOWNLOAD_QUEUE:
+            CURRENT_SEARCH = SEARCH_QUEUE.pop(0)
+            print_status()
+            links = extract_links(CURRENT_SEARCH['anime'], CURRENT_SEARCH['episodes'])
+            if links:
+                DOWNLOAD_QUEUE.append({"anime": CURRENT_SEARCH['anime'], "links": links})
+                print_status("✓ Liens trouves")
+            else:
+                for ep in CURRENT_SEARCH['episodes']:
+                    ACTIVE_DOWNLOADS.discard(f"{CURRENT_SEARCH['anime']['nom_dossier']}_{ep}")
+                print_status("✗ Aucun lien")
+            CURRENT_SEARCH = None
+        if DOWNLOAD_QUEUE and not SEARCH_QUEUE:
             PHASE = "DOWNLOAD"
-            while DOWNLOAD_QUEUE:
-                CURRENT_DOWNLOAD = DOWNLOAD_QUEUE.pop(0)
-                print_status()
-                download_links(CURRENT_DOWNLOAD['anime'], CURRENT_DOWNLOAD['links'])
-                FINISHED_DOWNLOADS.append(CURRENT_DOWNLOAD['anime']['nom_complet'].split(' ;;; ')[0])
-                CURRENT_DOWNLOAD = None
-                print_status()
+            CURRENT_DOWNLOAD = DOWNLOAD_QUEUE.pop(0)
+            print_status()
+            download_links(CURRENT_DOWNLOAD['anime'], CURRENT_DOWNLOAD['links'])
+            FINISHED_DOWNLOADS.append(CURRENT_DOWNLOAD['anime']['nom_complet'].split(' ;;; ')[0])
+            CURRENT_DOWNLOAD = None
+            print_status("✓ Termine")
     PHASE = "IDLE"
     WORKER_RUNNING = False
     print_status()
@@ -322,7 +323,7 @@ def get_anime_details(anime_data):
     progress = anime_data.get('progress', 0)
 
     if not os.path.exists(path):
-        return [{"ep": i, "status": "released" if i <= sortie else "unreleased"} for i in range(1, total + 1)]
+        return [{"ep": i, "status": "watched" if i <= progress else ("released" if i <= sortie else "unreleased")} for i in range(1, total + 1)]
 
     details = []
     for i in range(1, total + 1):
@@ -333,6 +334,8 @@ def get_anime_details(anime_data):
             status = "downloading"
         elif exists:
             status = "watched_kept" if i <= progress else "downloaded"
+        elif i <= progress:
+            status = "watched"
         else:
             status = "released" if i <= sortie else "unreleased"
         details.append({"ep": i, "status": status})
