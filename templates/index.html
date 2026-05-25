@@ -456,6 +456,7 @@
 
                 epBox.className = 'ep-box ' + statusClass;
                 epBox.innerText = i;
+                epBox.dataset.ep = i;
 
                 if (statusClass !== 'ep-not-released') {
                     epBox.onclick = function() {
@@ -469,9 +470,12 @@
         }
 
         function selectNewEpisodes() {
+            var prog = currentAnimeData && currentAnimeData.progress ? currentAnimeData.progress : 0;
             document.querySelectorAll('.ep-box.ep-not-downloaded:not(.selected)').forEach(function(el) {
-                el.classList.add('selected');
-                selectedCount++;
+                if (parseInt(el.dataset.ep) > prog) {
+                    el.classList.add('selected');
+                    selectedCount++;
+                }
             });
             var countEl = document.getElementById('count-display');
             if (countEl) countEl.innerText = selectedCount;
